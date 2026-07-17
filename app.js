@@ -23,7 +23,7 @@ const db = firebase.firestore();
 
 // ניהול המדינה (State) של האפליקציה
 let state = {
-  currentDate: new Date('2026-07-06'), // תחילת הקיץ כברירת מחדל
+  currentDate: new Date(), // תאריך היום כברירת מחדל
   activeChildId: 'hila',
   activeTab: 'scoreboard',
   children: [],
@@ -202,8 +202,14 @@ function getHebrewDateString(date) {
 }
 
 function getGregorianDateString(date) {
+  const today = new Date();
+  const isToday = date.getDate() === today.getDate() &&
+                  date.getMonth() === today.getMonth() &&
+                  date.getFullYear() === today.getFullYear();
+                  
   const options = { weekday: 'long', day: 'numeric', month: 'numeric', year: 'numeric' };
-  return new Intl.DateTimeFormat('he-IL', options).format(date);
+  const formatted = new Intl.DateTimeFormat('he-IL', options).format(date);
+  return isToday ? `היום, ${formatted}` : formatted;
 }
 
 // עדכון תצוגת התאריך בבורר
