@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>הקיץ של משפחת אליאב 2026</title>
+  <link rel="stylesheet" href="style.css?v=3.1">
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- כותרת עליונה -->
+    <header class="app-header">
+      <div class="header-main-content">
+        <h1 class="header-title">הקיץ של משפחת אליאב ☀️</h1>
+        <p class="header-subtitle">אפליקציית משימות ולוז קיץ להורים עמית ותפארת, והילדים הילה, מוריה, אריאל, שירה וטליה</p>
+      </div>
+      <div class="user-profile-status-bar" id="userProfileStatusBar" style="display:none;">
+        <div class="user-status-info">
+          <span class="user-status-avatar" id="userStatusAvatar">👤</span>
+          <span class="user-status-name" id="userStatusName">טוען...</span>
+        </div>
+        <button class="btn-secondary btn-logout" id="btnLogout" title="התנתק וחזור לבחירת משתמש">🚪 יציאה</button>
+      </div>
+    </header>
+
+    <!-- סרגל ניווט ראשי -->
+    <nav class="main-nav">
+      <button class="nav-tab active" data-tab="scoreboard" id="tabScoreboard">🏆 לוח ניקוד יומי</button>
+      <button class="nav-tab" data-tab="activities" id="tabActivities">📅 לו"ז ואירועים</button>
+      <button class="nav-tab" data-tab="shopping" id="tabShopping">🛒 קניות וציוד לקיץ</button>
+    </nav>
+
+    <!-- סיכום משפחתי עליון -->
+    <section class="family-summary-bar">
+      <div class="summary-item">
+        <div class="summary-label">🌟 סך הכל נקודות משפחתי</div>
+        <div class="summary-value" id="familyTotalPoints">0 נק'</div>
+      </div>
+    </section>
+
+    <!-- ================= טאב 1: לוח ניקוד ומשימות ================= -->
+    <main id="scoreboardTab" class="tab-content active">
+      <div class="scoreboard-layout">
+        
+        <!-- עמודה ימנית: בורר תאריך ובחירת ילד -->
+        <aside class="date-selector-card">
+          <!-- בורר תאריכים יומי -->
+          <div class="date-controls">
+            <button class="btn-arrow" id="prevDayBtn" title="יום קודם">←</button>
+            <div class="current-date-info">
+              <div class="gregorian-date" id="gregorianDate">טוען...</div>
+              <div class="hebrew-date" id="hebrewDate">טוען...</div>
+            </div>
+            <button class="btn-arrow" id="nextDayBtn" title="יום הבא">→</button>
+          </div>
+
+          <hr style="width:100%; border:0; border-top:1px solid rgba(0,0,0,0.08); margin:5px 0;">
+          
+          <h3 style="font-size:0.95rem; font-weight:700; width:100%; text-align:right;">בחרו ילד/ה:</h3>
+          <!-- רשימת כפתורי בחירת ילד -->
+          <div class="children-selector-list" id="childrenSelectorList">
+            <!-- יתרנדר דינמית ע"י JS -->
+          </div>
+        </aside>
+
+        <!-- עמודה שמאלית: כרטיס הישגים ומשימות הילד -->
+        <section class="child-details-pane" id="childDetailsPane">
+          <!-- כותרת פרטי הילד והישגים -->
+          <div class="child-status-header">
+            <div class="status-child-info">
+              <div class="status-avatar" id="selectedChildAvatar">👧</div>
+              <div class="status-texts">
+                <h2 id="selectedChildName">הישגים לקיץ</h2>
+                <p style="color:var(--text-muted); font-size:0.9rem;">עבור התאריך המוצג למעלה</p>
+              </div>
+            </div>
+            <div class="status-financial-summary">
+              <div class="points-sum" id="selectedChildPoints">0 נקודות</div>
+            </div>
+          </div>
+
+
+
+          <!-- גריד משימות (יומיות, בונוס, ושליליות) -->
+          <div class="tasks-grids">
+            <!-- משימות יומיות -->
+            <div class="tasks-column">
+              <h3 class="column-title plus">⏰ משימות יומיות</h3>
+              <div class="daily-tasks-list" id="dailyTasksList">
+                <!-- יתרנדר ע"י JS -->
+              </div>
+            </div>
+
+            <!-- משימות בונוס -->
+            <div class="tasks-column">
+              <h3 class="column-title plus" style="color: #845ef7;">⭐ משימות בונוס</h3>
+              <div class="bonus-tasks-list" id="bonusTasksList">
+                <!-- יתרנדר ע"י JS -->
+              </div>
+            </div>
+
+            <!-- משימות שליליות (מפחיתות ניקוד) -->
+            <div class="tasks-column">
+              <h3 class="column-title minus">⚠️ מוריד ניקוד</h3>
+              <div class="negative-tasks-list" id="negativeTasksList">
+                <!-- יתרנדר ע"י JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- הזנת ניקוד ידנית מיוחדת -->
+          <div class="custom-points-card">
+            <h3>⭐ תוספת / הפחתה מיוחדת של נקודות (על ידי ההורים)</h3>
+            <form class="custom-points-form" id="customPointsForm">
+              <input type="text" id="customReason" class="custom-input input-reason" placeholder="למשל: התנהגות למופת בנסיעה, עזרה מיוחדת..." required>
+              <input type="number" id="customAmount" class="custom-input input-amount" placeholder="נקודות (לדוגמה: 20 או -15)" required>
+              <button type="submit" class="btn-primary">הוסף רישום</button>
+            </form>
+            <div class="custom-actions-history" id="customActionsHistory">
+              <!-- יתרנדר ע"י JS -->
+            </div>
+          </div>
+
+        </section>
+      </div>
+    </main>
+
+    <!-- ================= טאב 2: לו"ז ופעילויות ================= -->
+    <main id="activitiesTab" class="tab-content">
+      <div class="activities-layout">
+        
+        <!-- כרטיס סינונים וחיפוש -->
+        <section class="filters-card">
+          <div class="filters-grid">
+            <div class="filter-group">
+              <label for="filterChild">סנן לפי ילד/ה:</label>
+              <select id="filterChild" class="filter-select">
+                <option value="all">🧒 כל הילדים</option>
+                <option value="hila">הילה</option>
+                <option value="moriah">מוריה</option>
+                <option value="ariel">אריאל</option>
+                <option value="shira">שירה</option>
+                <option value="talia">טליה</option>
+              </select>
+            </div>
+            
+            <div class="filter-group">
+              <label for="filterCategory">אופי הפעילות:</label>
+              <select id="filterCategory" class="filter-select">
+                <option value="all">📂 הכל</option>
+                <option value="activity">🏊 פעילות / קייטנה</option>
+                <option value="course">🥋 קורסים וחוגים</option>
+                <option value="medical">🩺 תורים רפואיים</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="filterDateType">תאריך:</label>
+              <select id="filterDateType" class="filter-select">
+                <option value="all">🗓️ כל התאריכים</option>
+                <option value="today">היום</option>
+                <option value="tomorrow">מחר</option>
+                <option value="week">ב-7 הימים הקרובים</option>
+                <option value="specific">בחירת תאריך ספציפי...</option>
+              </select>
+              <input type="date" id="filterSpecificDate" class="filter-input" style="display:none; margin-top:5px;">
+            </div>
+
+            <div class="filter-group">
+              <label for="searchInput">חיפוש חופשי:</label>
+              <input type="text" id="searchInput" class="filter-input" placeholder="חפש לפי פעילות, ציוד נדרש...">
+            </div>
+          </div>
+
+          <div class="activity-header-actions">
+            <span class="activity-count" id="activityCount">נמצאו 0 פעילויות</span>
+            <button class="btn-primary" id="btnOpenActivityModal">➕ הוספת פעילות חדשה</button>
+          </div>
+        </section>
+
+        <!-- גריד כרטיסי פעילות -->
+        <section class="events-grid" id="eventsGrid">
+          <!-- יתרנדר דינמית ע"י JS -->
+        </section>
+
+      </div>
+    </main>
+
+    <!-- ================= טאב 3: קניות וציוד לקיץ ================= -->
+    <main id="shoppingTab" class="tab-content">
+      <div class="shopping-layout">
+        
+        <!-- רשימת הקניות הראשית -->
+        <section class="shopping-card">
+          <div class="shopping-header">
+            <h2>🛒 רשימת ציוד וקניות לחופש</h2>
+            <div class="shopping-progress" id="shoppingProgressText">נקנו 0 מתוך 0 פריטים</div>
+          </div>
+
+          <!-- מסנני קניות -->
+          <div class="shopping-filters">
+            <select id="filterShopChild" class="filter-select" style="max-width:180px;">
+              <option value="all">🧒 סינון לפי ילד (הכל)</option>
+              <option value="all">כולם (משותף)</option>
+              <option value="hila">הילה</option>
+              <option value="moriah">מוריה</option>
+              <option value="ariel">אריאל</option>
+              <option value="shira">שירה</option>
+              <option value="talia">טליה</option>
+            </select>
+            
+            <select id="filterShopStatus" class="filter-select" style="max-width:180px;">
+              <option value="all">📋 כל הפריטים</option>
+              <option value="tobuy">צריך לקנות</option>
+              <option value="bought">כבר נקנה</option>
+            </select>
+          </div>
+
+          <!-- הפריטים עצמם -->
+          <div class="shopping-list-container" id="shoppingListContainer">
+            <!-- יתרנדר דינמית ע"י JS -->
+          </div>
+        </section>
+
+        <!-- טופס הוספת פריט (עמודה שמאל) -->
+        <aside class="side-form-card">
+          <h3>➕ הוספת פריט לרשימה</h3>
+          <form id="addShopForm" class="form-grid">
+            <div class="filter-group">
+              <label for="shopTitle">שם הפריט / ציוד:</label>
+              <input type="text" id="shopTitle" class="filter-input" placeholder="למשל: משקפת שחייה, חוברת חשבון..." required>
+            </div>
+            
+            <div class="filter-group">
+              <label for="shopChild">עבור מי הפריט?</label>
+              <select id="shopChild" class="filter-select">
+                <option value="all">כולם (משותף)</option>
+                <option value="hila">הילה</option>
+                <option value="moriah">מוריה</option>
+                <option value="ariel">אריאל</option>
+                <option value="shira">שירה</option>
+                <option value="talia">טליה</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="shopNotes">הערה / דגשים לקנייה:</label>
+              <input type="text" id="shopNotes" class="filter-input" placeholder="מידה, מותג, היכן לקנות...">
+            </div>
+
+            <button type="submit" class="btn-primary" style="margin-top:10px;">הוסף פריט קנייה</button>
+          </form>
+        </aside>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ================= מודאל (Popup) להוספת פעילות חדשה ================= -->
+  <div class="modal-overlay" id="activityModal">
+    <div class="modal-content">
+      <button class="modal-close" id="btnCloseActivityModal">×</button>
+      <h2 class="modal-title">📅 הוספת פעילות או אירוע חדש</h2>
+      
+      <form id="addActivityForm" class="form-grid">
+        <div class="filter-group">
+          <label for="actTitle">שם הפעילות / האירוע:</label>
+          <input type="text" id="actTitle" class="filter-input" placeholder="למשל: סרט בקולנוע, תור לרופא שיניים..." required>
+        </div>
+
+        <div class="filter-group">
+          <label for="actCategory">אופי הפעילות (קטגוריה):</label>
+          <select id="actCategory" class="filter-select">
+            <option value="activity">🏊 פעילות / קייטנה</option>
+            <option value="course">🥋 קורס / חוג</option>
+            <option value="medical">🩺 תור רפואי</option>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:15px;">
+          <div class="filter-group" style="flex:1;">
+            <label for="actDate">תאריך לועזי (העברי יחושב אוטומטית):</label>
+            <input type="date" id="actDate" class="filter-input" required>
+          </div>
+          <div class="filter-group" style="flex:1;">
+            <label for="actTime">שעות:</label>
+            <input type="text" id="actTime" class="filter-input" placeholder="למשל: 10:00 - 12:00">
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label>עבור אילו ילדים הפעילות? (ניתן לבחור יותר מאחד):</label>
+          <div class="checkbox-group">
+            <label class="checkbox-btn-label" style="--child-color: var(--color-hila); --child-bg-light: var(--color-hila-light);">
+              <input type="checkbox" id="act_child_hila" value="hila">
+              <span>👧 הילה</span>
+            </label>
+            <label class="checkbox-btn-label" style="--child-color: var(--color-moriah); --child-bg-light: var(--color-moriah-light);">
+              <input type="checkbox" id="act_child_moriah" value="moriah">
+              <span>🌸 מוריה</span>
+            </label>
+            <label class="checkbox-btn-label" style="--child-color: var(--color-ariel); --child-bg-light: var(--color-ariel-light);">
+              <input type="checkbox" id="act_child_ariel" value="ariel">
+              <span>👦 אריאל</span>
+            </label>
+            <label class="checkbox-btn-label" style="--child-color: var(--color-shira); --child-bg-light: var(--color-shira-light);">
+              <input type="checkbox" id="act_child_shira" value="shira">
+              <span>☀️ שירה</span>
+            </label>
+            <label class="checkbox-btn-label" style="--child-color: var(--color-talia); --child-bg-light: var(--color-talia-light);">
+              <input type="checkbox" id="act_child_talia" value="talia">
+              <span>👶 טליה</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label for="actRequired">ציוד או היערכות נדרשת:</label>
+          <input type="text" id="actRequired" class="filter-input" placeholder="למשל: בקבוק מים, בגד ים, פנקס חיסונים...">
+        </div>
+
+        <div class="filter-group">
+          <label for="actNotes">הערות נוספות:</label>
+          <textarea id="actNotes" class="filter-input" rows="3" placeholder="כתובת, טלפון, שם הרופא וכו'..." style="resize:vertical;"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-secondary" id="btnCloseActivityModal2" onclick="document.getElementById('activityModal').classList.remove('active')">ביטול</button>
+          <button type="submit" class="btn-primary">שמור פעילות</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- ================= מסך פורטל בחירת פרופיל ================= -->
+  <div class="portal-overlay active" id="profileSelectionPortal">
+    <div class="portal-container">
+      <h1 class="portal-title">הקיץ של משפחת אליאב ☀️</h1>
+      <h2 class="portal-subtitle">מי משתמש באפליקציה כעת?</h2>
+      
+      <!-- פרופילי הורים -->
+      <div class="portal-section">
+        <h3>🔑 הורים (מנהלים)</h3>
+        <div class="profiles-row">
+          <div class="profile-card parent" onclick="selectProfile('parent_amit')">
+            <div class="profile-avatar">👨</div>
+            <div class="profile-name">אבא עמית</div>
+          </div>
+          <div class="profile-card parent" onclick="selectProfile('parent_tiferet')">
+            <div class="profile-avatar">👩</div>
+            <div class="profile-name">אמא תפארת</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- פרופילי ילדים -->
+      <div class="portal-section">
+        <h3>🧒 הילדים</h3>
+        <div class="profiles-row">
+          <div class="profile-card child" onclick="selectProfile('hila')">
+            <div class="profile-avatar">👧</div>
+            <div class="profile-name">הילה</div>
+            <div class="profile-grade">כיתה ד</div>
+          </div>
+          <div class="profile-card child" onclick="selectProfile('moriah')">
+            <div class="profile-avatar">🌸</div>
+            <div class="profile-name">מוריה</div>
+            <div class="profile-grade">כיתה ג</div>
+          </div>
+          <div class="profile-card child" onclick="selectProfile('ariel')">
+            <div class="profile-avatar">👦</div>
+            <div class="profile-name">אריאל</div>
+            <div class="profile-grade">כיתה א</div>
+          </div>
+          <div class="profile-card child" onclick="selectProfile('shira')">
+            <div class="profile-avatar">☀️</div>
+            <div class="profile-name">שירה</div>
+            <div class="profile-grade">גן</div>
+          </div>
+          <div class="profile-card child" onclick="selectProfile('talia')">
+            <div class="profile-avatar">👶</div>
+            <div class="profile-name">טליה</div>
+            <div class="profile-grade">מעון</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= מודאל הקשת קוד סודי (PIN) ================= -->
+  <div class="modal-overlay" id="pinCodeModal">
+    <div class="modal-content pin-modal-content">
+      <button class="modal-close" onclick="closePinModal()">×</button>
+      <h2 class="modal-title">🔑 קוד סודי להורים</h2>
+      <p style="text-align:center; color:var(--text-muted); margin-bottom:15px;" id="pinModalInstructions">נא להזין קוד סודי בן 4 ספרות (ברירת מחדל: 1234)</p>
+      
+      <!-- תצוגת הקוד המוזן -->
+      <div class="pin-display-container">
+        <div class="pin-dots">
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
+        </div>
+      </div>
+
+      <!-- מקלדת נומרית -->
+      <div class="numpad-grid">
+        <button class="btn-num" onclick="pressNum(1)">1</button>
+        <button class="btn-num" onclick="pressNum(2)">2</button>
+        <button class="btn-num" onclick="pressNum(3)">3</button>
+        <button class="btn-num" onclick="pressNum(4)">4</button>
+        <button class="btn-num" onclick="pressNum(5)">5</button>
+        <button class="btn-num" onclick="pressNum(6)">6</button>
+        <button class="btn-num" onclick="pressNum(7)">7</button>
+        <button class="btn-num" onclick="pressNum(8)">8</button>
+        <button class="btn-num" onclick="pressNum(9)">9</button>
+        <button class="btn-num btn-clear" onclick="clearPin()">C</button>
+        <button class="btn-num" onclick="pressNum(0)">0</button>
+        <button class="btn-num btn-backspace" onclick="backspacePin()">⌫</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- קונטיינר הודעות קופצות (Toasts) -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- טעינת סקריפטים של Firebase (מצב תאימות - compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <!-- טעינת קבצי ה-JS עם מנגנון מניעת מטמון -->
+  <script src="data.js?v=3.1"></script>
+  <script src="app.js?v=3.1"></script>
+</body>
+</html>

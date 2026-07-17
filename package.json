@@ -1,0 +1,11 @@
+{
+  "name": "family-summer-2026",
+  "version": "1.0.0",
+  "description": "אפליקציה לניהול משימות ולוז הקיץ של משפחת אליאב",
+  "scripts": {
+    "dev": "npx -y http-server -p 3000 -o"
+  },
+  "keywords": [],
+  "author": "Antigravity",
+  "license": "ISC"
+}
