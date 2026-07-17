@@ -452,12 +452,12 @@ window.closePinModal = function() {
 };
 
 window.pressNum = function(num) {
-  if (state.currentPIN.length < 4) {
+  if (state.currentPIN.length < 6) {
     state.currentPIN += num;
     updatePinDots();
     
-    if (state.currentPIN.length === 4) {
-      if (state.currentPIN === '1234') {
+    if (state.currentPIN.length === 6) {
+      if (state.currentPIN === '208000') {
         state.currentUser = state.tempSelectedUserId;
         localStorage.setItem('family_summer_active_user', state.currentUser);
         

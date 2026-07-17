@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>הקיץ של משפחת אליאב 2026</title>
-  <link rel="stylesheet" href="style.css?v=3.1">
+  <link rel="stylesheet" href="style.css?v=3.2">
 </head>
 <body>
 
@@ -396,11 +396,13 @@
     <div class="modal-content pin-modal-content">
       <button class="modal-close" onclick="closePinModal()">×</button>
       <h2 class="modal-title">🔑 קוד סודי להורים</h2>
-      <p style="text-align:center; color:var(--text-muted); margin-bottom:15px;" id="pinModalInstructions">נא להזין קוד סודי בן 4 ספרות (ברירת מחדל: 1234)</p>
+      <p style="text-align:center; color:var(--text-muted); margin-bottom:15px;" id="pinModalInstructions">נא להזין קוד סודי בן 6 ספרות</p>
       
       <!-- תצוגת הקוד המוזן -->
       <div class="pin-display-container">
         <div class="pin-dots">
+          <span class="pin-dot"></span>
+          <span class="pin-dot"></span>
           <span class="pin-dot"></span>
           <span class="pin-dot"></span>
           <span class="pin-dot"></span>
@@ -434,7 +436,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- טעינת קבצי ה-JS עם מנגנון מניעת מטמון -->
-  <script src="data.js?v=3.1"></script>
-  <script src="app.js?v=3.1"></script>
+  <script src="data.js?v=3.2"></script>
+  <script src="app.js?v=3.2"></script>
 </body>
 </html>
