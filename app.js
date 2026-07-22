@@ -446,6 +446,32 @@ function calculateCumulativePoints(childId) {
   return total;
 }
 
+// חישוב ניקוד יומי לילד בתאריך ספציפי
+function calculateDayPoints(childId, dateKey) {
+  let total = 0;
+  const dayScores = state.scores[dateKey] && state.scores[dateKey][childId];
+  if (dayScores) {
+    // משימות
+    if (dayScores.tasks) {
+      for (const taskId in dayScores.tasks) {
+        if (dayScores.tasks[taskId]) {
+          let task = DEFAULT_TASKS.daily.find(t => t.id === taskId) ||
+                     DEFAULT_TASKS.bonus.find(t => t.id === taskId) ||
+                     DEFAULT_TASKS.negative.find(t => t.id === taskId);
+          if (task) total += task.points;
+        }
+      }
+    }
+    // נקודות ידניות
+    if (dayScores.custom) {
+      dayScores.custom.forEach(item => {
+        total += item.points;
+      });
+    }
+  }
+  return total;
+}
+
 // חישוב ניקוד משפחתי כולל
 function getFamilyTotals() {
   let totalPoints = 0;
@@ -656,14 +682,17 @@ function renderScoreboard() {
 
   // כותרת והישגים לילד
   const childCumulativePoints = calculateCumulativePoints(activeChild.id);
+  const childDayPoints = calculateDayPoints(activeChild.id, dateKey);
   
   const avatarEl = document.getElementById('selectedChildAvatar');
   const nameEl = document.getElementById('selectedChildName');
   const pointsEl = document.getElementById('selectedChildPoints');
+  const dayPointsEl = document.getElementById('selectedChildDayPoints');
   
   if (avatarEl) avatarEl.textContent = activeChild.icon;
   if (nameEl) nameEl.textContent = `הישגים לקיץ - ${activeChild.name}`;
-  if (pointsEl) pointsEl.textContent = `${childCumulativePoints} נקודות`;
+  if (pointsEl) pointsEl.textContent = `${childCumulativePoints} נקודות (סה"כ)`;
+  if (dayPointsEl) dayPointsEl.textContent = `${childDayPoints} נקודות ביום זה`;
 
   // 3. רנדור רשימת משימות ליום זה
   if (!state.scores[dateKey]) {
