@@ -963,10 +963,22 @@ function renderActivities() {
         if (eventDateStr !== tomorrowStr) return false;
       } else if (dateTypeFilter === 'week') {
         const today = new Date();
+        today.setHours(0, 0, 0, 0);
         const nextWeek = new Date();
         nextWeek.setDate(today.getDate() + 7);
+        nextWeek.setHours(23, 59, 59, 999);
         const eventDate = new Date(eventDateStr);
+        eventDate.setHours(0, 0, 0, 0);
         if (eventDate < today || eventDate > nextWeek) return false;
+      } else if (dateTypeFilter === 'month') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const nextMonth = new Date();
+        nextMonth.setDate(today.getDate() + 30);
+        nextMonth.setHours(23, 59, 59, 999);
+        const eventDate = new Date(eventDateStr);
+        eventDate.setHours(0, 0, 0, 0);
+        if (eventDate < today || eventDate > nextMonth) return false;
       } else if (dateTypeFilter === 'specific') {
         if (specificDateVal && eventDateStr !== specificDateVal) return false;
       }
