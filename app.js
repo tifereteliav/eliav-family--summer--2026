@@ -32,8 +32,7 @@ let state = {
   scores: {},
   currentUser: null,
   currentPIN: '',
-  tempSelectedUserId: null,
-  shoppingNotes: ""
+  tempSelectedUserId: null
 };
 
 // אתחול האפליקציה
@@ -89,9 +88,6 @@ function initData() {
     localStorage.setItem('family_school_shopping', JSON.stringify(state.shopping));
   }
 
-  // הערות קניות משותפות
-  const savedNotes = localStorage.getItem('family_school_shopping_notes');
-  state.shoppingNotes = savedNotes || '';
 
   // נקודות ומשימות - מנגנון טעינה וסנכרון בטוח
   const currentScoresVersion = '1.2';
@@ -172,15 +168,6 @@ function saveShopping() {
   localStorage.setItem('family_school_shopping', JSON.stringify(state.shopping));
   db.collection('family_data').doc('school_shopping').set({ shopping: state.shopping })
     .catch(err => console.error("שגיאה בשמירת קניות לענן:", err));
-}
-
-function saveSharedNotes() {
-  const notesEl = document.getElementById('shoppingSharedNotes');
-  const notesText = notesEl ? notesEl.value : (state.shoppingNotes || '');
-  state.shoppingNotes = notesText;
-  localStorage.setItem('family_school_shopping_notes', notesText);
-  db.collection('family_data').doc('school_shopping_notes').set({ notes: notesText })
-    .catch(err => console.error("שגיאה בשמירת הערות קניות לענן:", err));
 }
 
 // פונקציית עזר למיזוג בטוח של ניקוד מקומי וניקוד בענן
@@ -303,22 +290,6 @@ function setupFirebaseSync() {
     console.error("שגיאה בסנכרון קניות:", error);
   });
 
-  // 4. מאזין להערות קניות משותפות
-  db.collection('family_data').doc('school_shopping_notes').onSnapshot((doc) => {
-    if (doc.exists) {
-      const data = doc.data();
-      const notesEl = document.getElementById('shoppingSharedNotes');
-      if (notesEl && document.activeElement !== notesEl) {
-        notesEl.value = data.notes || '';
-      }
-      state.shoppingNotes = data.notes || '';
-      localStorage.setItem('family_school_shopping_notes', state.shoppingNotes);
-    } else {
-      saveSharedNotes();
-    }
-  }, (error) => {
-    console.error("שגיאה בסנכרון הערות קניות:", error);
-  });
 }
 
 // עוזרי תאריכים
@@ -422,21 +393,6 @@ function setupEventListeners() {
   const filterShopStatus = document.getElementById('filterShopStatus');
   if (filterShopChild) filterShopChild.addEventListener('change', renderShopping);
   if (filterShopStatus) filterShopStatus.addEventListener('change', renderShopping);
-
-  // שמירה והתנהגות של הערות קניות משותפות
-  const btnSaveNotes = document.getElementById('btnSaveSharedNotes');
-  if (btnSaveNotes) {
-    btnSaveNotes.addEventListener('click', () => {
-      saveSharedNotes();
-      showToast('ההערות נשמרו בהצלחה! 📝', 'success');
-    });
-  }
-  const notesEl = document.getElementById('shoppingSharedNotes');
-  if (notesEl) {
-    notesEl.addEventListener('blur', () => {
-      saveSharedNotes();
-    });
-  }
 
   // פתיחת מודאל הוספת פעילות
   const btnOpenActivityModal = document.getElementById('btnOpenActivityModal');
@@ -1424,11 +1380,6 @@ function renderShopping() {
     shopContainer.appendChild(row);
   });
 
-  // סנכרון שדה הערות משותפות
-  const notesEl = document.getElementById('shoppingSharedNotes');
-  if (notesEl && document.activeElement !== notesEl) {
-    notesEl.value = state.shoppingNotes || '';
-  }
 }
 
 // התאמת כמות קנויה פריט פריט
