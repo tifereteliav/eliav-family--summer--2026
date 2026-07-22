@@ -200,11 +200,54 @@ const INITIAL_EVENTS = [
 ];
 
 const INITIAL_SHOPPING = [
-  { id: 'shop_1', title: 'משקפת שחייה מקצועית', child: 'ariel', category: 'equipment', bought: false, notes: 'לקורס השחייה' },
-  { id: 'shop_2', title: 'בגד ים שלם נוח', child: 'ariel', category: 'clothing', bought: false, notes: 'לקורס ובריכה' },
-  { id: 'shop_3', title: 'כובע ים מסיליקון', child: 'ariel', category: 'equipment', bought: false, notes: 'חובה בקורס' },
-  { id: 'shop_4', title: 'קרם הגנה לילדים SPF 50', child: 'all', category: 'medical', bought: false, notes: 'לכל הילדים לבריכה' },
-  { id: 'shop_5', title: 'חוברת תרגול "עולים לכיתה ד"', child: 'hila', category: 'books', bought: false, notes: 'לתרגול בבקרים' },
-  { id: 'shop_6', title: 'חוברת תרגול "עולים לכיתה ג"', child: 'moriah', category: 'books', bought: false, notes: 'לתרגול בבקרים' },
-  { id: 'shop_7', title: 'בקבוק מים רב פעמי שומר קור', child: 'shira', category: 'equipment', bought: true, notes: 'נקנה בקניון' }
+  // --- אריאל ---
+  { id: 'shop_ariel_1', title: 'נעלי ספורט', child: 'ariel', quantity: 1, category: 'clothing', bought: false, notes: 'חינוך גופני: ביגוד חובה לשיעורים' },
+  { id: 'shop_ariel_2', title: 'מכנס קצר או טרנינג', child: 'ariel', quantity: 1, category: 'clothing', bought: false, notes: 'חינוך גופני: ביגוד חובה לשיעורים' },
+  { id: 'shop_ariel_3', title: 'מחברות עברית חכמות לכיתה ב\'', child: 'ariel', quantity: 7, category: 'books', bought: false, notes: 'מחברות' },
+  { id: 'shop_ariel_4', title: 'מחברת חשבון 40 דף', child: 'ariel', quantity: 2, category: 'books', bought: false, notes: 'מחברות' },
+  { id: 'shop_ariel_5', title: 'קלסר פוליו עם טבעות לדפי עבודה', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'מחברות' },
+  { id: 'shop_ariel_6', title: 'חוצצים מבריסטול', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'מחברות' },
+  { id: 'shop_ariel_7', title: 'עפרון', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד' },
+  { id: 'shop_ariel_8', title: 'מחק', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד' },
+  { id: 'shop_ariel_9', title: 'מחדד', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד' },
+  { id: 'shop_ariel_10', title: 'מספריים', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד' },
+  { id: 'shop_ariel_11', title: '6 צבעים או לורדים', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד' },
+  { id: 'shop_ariel_12', title: 'מרקר בצבע צהוב', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד' },
+  { id: 'shop_ariel_13', title: 'סרגל', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד' },
+  { id: 'shop_ariel_14', title: 'דבק סטיק', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד' },
+  { id: 'shop_ariel_15', title: 'מפית לתיק אוכל', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'תיק אוכל' },
+  { id: 'shop_ariel_16', title: 'מגבת לתיק אוכל', child: 'ariel', quantity: 1, category: 'equipment', bought: false, notes: 'תיק אוכל' },
+
+  // --- הילה ---
+  { id: 'shop_hila_1', title: 'סידור תפילה', child: 'hila', quantity: 1, category: 'books', bought: false, notes: 'הציוד הנדרש' },
+  { id: 'shop_hila_2', title: 'תנ"ך', child: 'hila', quantity: 1, category: 'books', bought: false, notes: 'הציוד הנדרש' },
+  { id: 'shop_hila_3', title: 'מחברת עברית שורה אחת 40 דף', child: 'hila', quantity: 20, category: 'books', bought: false, notes: 'מחברות' },
+  { id: 'shop_hila_4', title: 'מחברת חשבון 40 דף', child: 'hila', quantity: 2, category: 'books', bought: false, notes: 'מחברות' },
+  { id: 'shop_hila_5', title: 'מחברת אנגלית גאונית', child: 'hila', quantity: 1, category: 'books', bought: false, notes: 'מי שיש בידה משנה שעברה לא צריכה' },
+  { id: 'shop_hila_6', title: 'עפרון', child: 'hila', quantity: 1, category: 'equipment', bought: false, notes: 'עפרונות / עפרון חודים + חודים' },
+  { id: 'shop_hila_7', title: 'מחק', child: 'hila', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד כתיבה' },
+  { id: 'shop_hila_8', title: 'מחדד', child: 'hila', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד כתיבה' },
+  { id: 'shop_hila_9', title: 'סרגל', child: 'hila', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד כתיבה' },
+  { id: 'shop_hila_10', title: 'דבק סטיק קטן', child: 'hila', quantity: 5, category: 'equipment', bought: false, notes: 'מומלץ לקנות 5 קטנים כדי שלא יתייבש, אבל יספיק לכל השנה' },
+  { id: 'shop_hila_11', title: 'מספריים', child: 'hila', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד כתיבה' },
+  { id: 'shop_hila_12', title: 'טושים', child: 'hila', quantity: 1, category: 'equipment', bought: false, notes: 'צבעים' },
+  { id: 'shop_hila_13', title: 'מרקרים בצבעים שונים', child: 'hila', quantity: 5, category: 'equipment', bought: false, notes: 'צבעים' },
+  { id: 'shop_hila_14', title: 'חב\' ניילוניות', child: 'hila', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד משרדי' },
+  { id: 'shop_hila_15', title: 'קלסר', child: 'hila', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד משרדי' },
+  { id: 'shop_hila_16', title: 'דפדפות עברית', child: 'hila', quantity: 1, category: 'equipment', bought: false, notes: 'נייר' },
+  { id: 'shop_hila_17', title: 'יומן שנתי עם תאריכים בגודל A5', child: 'hila', quantity: 1, category: 'books', bought: false, notes: 'ההולם את דרכו החינוכית של בית הספר' },
+
+  // --- מוריה ---
+  { id: 'shop_moriah_1', title: 'מחברת עברית 14 שורות 40 דף', child: 'moriah', quantity: 20, category: 'books', bought: false, notes: 'מחברות' },
+  { id: 'shop_moriah_2', title: 'מחברת חשבון 40 דף', child: 'moriah', quantity: 2, category: 'books', bought: false, notes: 'מחברות' },
+  { id: 'shop_moriah_3', title: 'מחברת אנגלית גאונית', child: 'moriah', quantity: 1, category: 'books', bought: false, notes: 'מחברות' },
+  { id: 'shop_moriah_4', title: 'תיקייה שקופה', child: 'moriah', quantity: 4, category: 'equipment', bought: false, notes: 'תיקיות שקופות' },
+  { id: 'shop_moriah_5', title: 'מספריים', child: 'moriah', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד כתיבה' },
+  { id: 'shop_moriah_6', title: 'דבק סטיק גדול', child: 'moriah', quantity: 3, category: 'equipment', bought: false, notes: 'ציוד כתיבה' },
+  { id: 'shop_moriah_7', title: 'דבק נוזלי', child: 'moriah', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד כתיבה' },
+  { id: 'shop_moriah_8', title: 'סרגל', child: 'moriah', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד כתיבה' },
+  { id: 'shop_moriah_9', title: 'מרקרים בצבעים שונים', child: 'moriah', quantity: 5, category: 'equipment', bought: false, notes: 'צבעים' },
+  { id: 'shop_moriah_10', title: 'חב\' ניילוניות', child: 'moriah', quantity: 1, category: 'equipment', bought: false, notes: 'ציוד משרדי' },
+  { id: 'shop_moriah_11', title: 'יומן שנתי עם תאריכים בגודל A5', child: 'moriah', quantity: 1, category: 'books', bought: false, notes: 'ההולם את דרכו החינוכית של בית הספר' },
+  { id: 'shop_moriah_12', title: 'סידור תפילה', child: 'moriah', quantity: 1, category: 'books', bought: false, notes: 'הציוד הנדרש' }
 ];

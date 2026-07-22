@@ -29,7 +29,7 @@
     <nav class="main-nav">
       <button class="nav-tab active" data-tab="scoreboard" id="tabScoreboard">🏆 לוח ניקוד יומי</button>
       <button class="nav-tab" data-tab="activities" id="tabActivities">📅 לו"ז ואירועים</button>
-      <button class="nav-tab" data-tab="shopping" id="tabShopping">🛒 קניות וציוד לקיץ</button>
+      <button class="nav-tab" data-tab="shopping" id="tabShopping">🛒 קניות וציוד לשנה הבאה</button>
     </nav>
 
     <!-- סיכום משפחתי עליון -->
@@ -189,22 +189,22 @@
       </div>
     </main>
 
-    <!-- ================= טאב 3: קניות וציוד לקיץ ================= -->
+    <!-- ================= טאב 3: קניות וציוד לשנה הבאה ================= -->
     <main id="shoppingTab" class="tab-content">
       <div class="shopping-layout">
         
         <!-- רשימת הקניות הראשית -->
         <section class="shopping-card">
           <div class="shopping-header">
-            <h2>🛒 רשימת ציוד וקניות לחופש</h2>
+            <h2>🛒 קניות וציוד לשנה הבאה</h2>
             <div class="shopping-progress" id="shoppingProgressText">נקנו 0 מתוך 0 פריטים</div>
           </div>
 
           <!-- מסנני קניות -->
           <div class="shopping-filters">
-            <select id="filterShopChild" class="filter-select" style="max-width:180px;">
-              <option value="all">🧒 סינון לפי ילד (הכל)</option>
-              <option value="all">כולם (משותף)</option>
+            <select id="filterShopChild" class="filter-select" style="max-width:200px;">
+              <option value="union">👥 כולם (רשימה מאוחדת)</option>
+              <option value="all">🧒 כל הפריטים (מפורט)</option>
               <option value="hila">הילה</option>
               <option value="moriah">מוריה</option>
               <option value="ariel">אריאל</option>
@@ -244,6 +244,11 @@
                 <option value="shira">שירה</option>
                 <option value="talia">טליה</option>
               </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="shopQuantity">כמות:</label>
+              <input type="number" id="shopQuantity" class="filter-input" min="1" value="1" required>
             </div>
 
             <div class="filter-group">

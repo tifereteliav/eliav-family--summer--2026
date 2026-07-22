@@ -65,13 +65,13 @@ function initData() {
     localStorage.setItem('family_summer_events', JSON.stringify(INITIAL_EVENTS));
   }
 
-  // רשימת קניות
-  const savedShopping = localStorage.getItem('family_summer_shopping');
+  // רשימת קניות לשנה הבאה
+  const savedShopping = localStorage.getItem('family_school_shopping');
   if (savedShopping) {
     state.shopping = JSON.parse(savedShopping);
   } else {
     state.shopping = INITIAL_SHOPPING;
-    localStorage.setItem('family_summer_shopping', JSON.stringify(INITIAL_SHOPPING));
+    localStorage.setItem('family_school_shopping', JSON.stringify(INITIAL_SHOPPING));
   }
 
   // נקודות ומשימות - מנגנון טעינה וסנכרון בטוח
@@ -150,8 +150,8 @@ function saveEvents() {
 }
 
 function saveShopping() {
-  localStorage.setItem('family_summer_shopping', JSON.stringify(state.shopping));
-  db.collection('family_data').doc('shopping').set({ shopping: state.shopping })
+  localStorage.setItem('family_school_shopping', JSON.stringify(state.shopping));
+  db.collection('family_data').doc('school_shopping').set({ shopping: state.shopping })
     .catch(err => console.error("שגיאה בשמירת קניות לענן:", err));
 }
 
@@ -254,8 +254,8 @@ function setupFirebaseSync() {
     console.error("שגיאה בסנכרון אירועים:", error);
   });
 
-  // 3. מאזין לרשימת קניות
-  db.collection('family_data').doc('shopping').onSnapshot((doc) => {
+  // 3. מאזין לרשימת קניות לשנה הבאה
+  db.collection('family_data').doc('school_shopping').onSnapshot((doc) => {
     if (doc.exists) {
       const data = doc.data();
       state.shopping = data.shopping || [];
@@ -1112,6 +1112,59 @@ window.toggleFormChildCheckbox = function(labelElement, checkboxId) {
 };
 
 // --- אזור 3: רשימת קניות וציוד ---
+// פונקציית עזר לאיחוד רשימות קניות לשנה הבאה
+function getCombinedShoppingItems(items) {
+  const combined = {};
+  items.forEach(item => {
+    const key = item.title.trim().toLowerCase();
+    if (!combined[key]) {
+      combined[key] = {
+        title: item.title,
+        quantity: 0,
+        boughtQuantity: 0,
+        childrenList: [],
+        category: item.category,
+        notes: [],
+        items: []
+      };
+    }
+    
+    const qty = parseInt(item.quantity) || 1;
+    combined[key].quantity += qty;
+    if (item.bought) {
+      combined[key].boughtQuantity += qty;
+    }
+    
+    if (!combined[key].childrenList.includes(item.child)) {
+      combined[key].childrenList.push(item.child);
+    }
+    
+    if (item.notes && item.notes.trim()) {
+      combined[key].notes.push(item.notes.trim());
+    }
+    
+    combined[key].items.push(item);
+  });
+  
+  return Object.values(combined).map((c, index) => {
+    const allBought = c.items.every(i => i.bought);
+    const uniqueNotes = [...new Set(c.notes)].join(' ; ');
+    
+    return {
+      id: 'combined_' + index,
+      title: c.title,
+      quantity: c.quantity,
+      boughtQuantity: c.boughtQuantity,
+      child: c.childrenList.length === 1 ? c.childrenList[0] : 'all',
+      childrenList: c.childrenList,
+      category: c.category,
+      bought: allBought,
+      notes: uniqueNotes,
+      constituentIds: c.items.map(i => i.id).join(',')
+    };
+  });
+}
+
 function renderShopping() {
   const shopContainer = document.getElementById('shoppingListContainer');
   if (!shopContainer) return;
@@ -1130,33 +1183,60 @@ function renderShopping() {
     filterShopChildEl.style.display = isParent() ? 'inline-block' : 'none';
   }
 
-  const childFilter = isParent() ? (filterShopChildEl ? filterShopChildEl.value : 'all') : state.currentUser;
+  const childFilter = isParent() ? (filterShopChildEl ? filterShopChildEl.value : 'union') : state.currentUser;
   const statusFilter = document.getElementById('filterShopStatus').value;
 
-  const filteredItems = state.shopping.filter(item => {
-    // 1. סינון לפי ילד
-    if (childFilter !== 'all') {
+  let displayItems = [];
+
+  if (childFilter === 'union') {
+    const combinedItems = getCombinedShoppingItems(state.shopping);
+    displayItems = combinedItems.filter(item => {
+      if (statusFilter !== 'all') {
+        const isBought = statusFilter === 'bought';
+        if (item.bought !== isBought) return false;
+      }
+      return true;
+    });
+  } else if (childFilter === 'all') {
+    displayItems = state.shopping.filter(item => {
+      if (statusFilter !== 'all') {
+        const isBought = statusFilter === 'bought';
+        if (item.bought !== isBought) return false;
+      }
+      return true;
+    });
+  } else {
+    displayItems = state.shopping.filter(item => {
       if (item.child !== childFilter && item.child !== 'all') return false;
+      if (statusFilter !== 'all') {
+        const isBought = statusFilter === 'bought';
+        if (item.bought !== isBought) return false;
+      }
+      return true;
+    });
+  }
+
+  // רנדור מד התקדמות לקניות לפי כמות הפריטים בפועל
+  let totalCount = 0;
+  let boughtCount = 0;
+  displayItems.forEach(i => {
+    const qty = parseInt(i.quantity) || 1;
+    totalCount += qty;
+    if (i.bought) {
+      boughtCount += qty;
+    } else if (typeof i.boughtQuantity === 'number') {
+      boughtCount += i.boughtQuantity;
     }
-    // 2. סינון לפי סטטוס
-    if (statusFilter !== 'all') {
-      const isBought = statusFilter === 'bought';
-      if (item.bought !== isBought) return false;
-    }
-    return true;
   });
 
-  // רנדור מד התקדמות לקניות
-  const totalItems = filteredItems.length;
-  const boughtItems = filteredItems.filter(i => i.bought).length;
   const progressTextEl = document.getElementById('shoppingProgressText');
   if (progressTextEl) {
-    progressTextEl.textContent = `נקנו ${boughtItems} מתוך ${totalItems} פריטים (${totalItems > 0 ? Math.round((boughtItems / totalItems) * 100) : 0}%)`;
+    progressTextEl.textContent = `נקנו ${boughtCount} מתוך ${totalCount} פריטים (${totalCount > 0 ? Math.round((boughtCount / totalCount) * 100) : 0}%)`;
   }
 
   // רנדור רשימה
   shopContainer.innerHTML = '';
-  if (filteredItems.length === 0) {
+  if (displayItems.length === 0) {
     shopContainer.innerHTML = `
       <div style="text-align:center; padding:30px; color:var(--text-muted);">
         <p>אין פריטים ברשימה התואמים לסינון הנוכחי.</p>
@@ -1165,43 +1245,75 @@ function renderShopping() {
     return;
   }
 
-  filteredItems.forEach(item => {
+  displayItems.forEach(item => {
     const row = document.createElement('div');
     row.className = `shop-item-row ${item.bought ? 'bought' : ''}`;
     
-    // זיהוי שם הילד והצבע שלו
-    let childName = 'כולם';
+    let badgesHTML = '';
     let childColor = 'var(--color-all)';
-    let childIcon = '👥';
-    if (item.child !== 'all') {
-      const child = state.children.find(c => c.id === item.child);
-      if (child) {
-        childName = child.name;
-        childColor = child.color;
-        childIcon = child.icon;
+    
+    if (item.childrenList && item.childrenList.length > 0) {
+      item.childrenList.forEach(childId => {
+        let name = 'כולם';
+        let color = 'var(--color-all)';
+        let icon = '👥';
+        if (childId !== 'all') {
+          const child = state.children.find(c => c.id === childId);
+          if (child) {
+            name = child.name;
+            color = child.color;
+            icon = child.icon;
+          }
+        }
+        badgesHTML += `<span class="badge-child" style="background:${color}18; color:${color}; margin-left: 4px;">${icon} ל${name}</span>`;
+      });
+      if (item.childrenList.length === 1 && item.childrenList[0] !== 'all') {
+        const child = state.children.find(c => c.id === item.childrenList[0]);
+        if (child) childColor = child.color;
       }
+    } else {
+      let childName = 'כולם';
+      let childColorForBadge = 'var(--color-all)';
+      let childIcon = '👥';
+      if (item.child !== 'all') {
+        const child = state.children.find(c => c.id === item.child);
+        if (child) {
+          childName = child.name;
+          childColor = child.color;
+          childColorForBadge = child.color;
+          childIcon = child.icon;
+        }
+      }
+      badgesHTML = `<span class="badge-child" style="background:${childColorForBadge}18; color:${childColorForBadge}">${childIcon} ל${childName}</span>`;
     }
 
+    const qty = parseInt(item.quantity) || 1;
+    const qtyText = qty > 1 ? `<span class="quantity-badge" style="background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; margin-right: 8px;">כמות: ${qty}</span>` : '';
+    
+    const onclickStr = item.constituentIds 
+      ? `toggleShopItem('${item.id}', '${item.constituentIds}')`
+      : `toggleShopItem('${item.id}')`;
+
+    const deleteBtn = isParent() && !item.constituentIds
+      ? `<div><button class="btn-icon delete" title="מחק פריט" onclick="deleteShopItem('${item.id}')">🗑️</button></div>`
+      : '';
+
     row.innerHTML = `
-      <div class="shop-item-info" onclick="toggleShopItem('${item.id}')" style="cursor:pointer;">
+      <div class="shop-item-info" onclick="${onclickStr}" style="cursor:pointer;">
         <div class="task-checkbox" style="border-radius:50%; width:24px; height:24px; border-color:${childColor};"></div>
         <div class="shop-item-details">
-          <span class="shop-item-title">${item.title}</span>
+          <span class="shop-item-title">${item.title} ${qtyText}</span>
           <div class="shop-item-meta">
-            <span class="badge-child" style="background:${childColor}18; color:${childColor}">${childIcon} ל${childName}</span>
+            ${badgesHTML}
             ${item.notes ? `<span>• ${item.notes}</span>` : ''}
           </div>
         </div>
       </div>
-      ${isParent() ? `
-      <div>
-        <button class="btn-icon delete" title="מחק פריט" onclick="deleteShopItem('${item.id}')">🗑️</button>
-      </div>` : ''}
+      ${deleteBtn}
     `;
     
-    // אם כבר נקנה, סמן וי בתיבה
     if (item.bought) {
-      row.querySelector('.task-checkbox').style.background = childColor;
+      row.querySelector('.task-checkbox').style.background = childColor === 'var(--color-all)' ? 'var(--primary)' : childColor;
       row.querySelector('.task-checkbox').innerHTML = '<span style="color:white; font-size:0.75rem; font-weight:bold;">✓</span>';
     }
 
@@ -1210,13 +1322,26 @@ function renderShopping() {
 }
 
 // שינוי סטטוס קנייה
-window.toggleShopItem = function(itemId) {
-  const item = state.shopping.find(i => i.id === itemId);
-  if (item) {
-    item.bought = !item.bought;
-    saveShopping();
-    renderShopping();
-    showToast(item.bought ? `סומן כ"נקנה": ${item.title}` : `סומן כ"צריך לקנות": ${item.title}`, 'info');
+window.toggleShopItem = function(itemId, constituentIdsStr) {
+  if (constituentIdsStr) {
+    const ids = constituentIdsStr.split(',');
+    const items = state.shopping.filter(i => ids.includes(i.id));
+    if (items.length > 0) {
+      const allBought = items.every(i => i.bought);
+      items.forEach(i => i.bought = !allBought);
+      saveShopping();
+      renderShopping();
+      const title = items[0].title;
+      showToast(!allBought ? `סומן כ"נקנה": ${title} (לכולם)` : `סומן כ"צריך לקנות": ${title} (לכולם)`, 'info');
+    }
+  } else {
+    const item = state.shopping.find(i => i.id === itemId);
+    if (item) {
+      item.bought = !item.bought;
+      saveShopping();
+      renderShopping();
+      showToast(item.bought ? `סומן כ"נקנה": ${item.title}` : `סומן כ"צריך לקנות": ${item.title}`, 'info');
+    }
   }
 };
 
@@ -1236,12 +1361,14 @@ function handleAddShopSubmit(e) {
   e.preventDefault();
   const titleInput = document.getElementById('shopTitle');
   const childSelect = document.getElementById('shopChild');
+  const quantityInput = document.getElementById('shopQuantity');
   const notesInput = document.getElementById('shopNotes');
 
   if (!titleInput || !childSelect || !notesInput) return;
 
   const title = titleInput.value.trim();
   const child = childSelect.value;
+  const quantity = quantityInput ? parseInt(quantityInput.value) || 1 : 1;
   const notes = notesInput.value.trim();
 
   if (!title) {
@@ -1253,6 +1380,7 @@ function handleAddShopSubmit(e) {
     id: 'shop_' + Date.now(),
     title,
     child,
+    quantity,
     bought: false,
     notes
   };
@@ -1262,6 +1390,7 @@ function handleAddShopSubmit(e) {
 
   // איפוס
   titleInput.value = '';
+  if (quantityInput) quantityInput.value = '1';
   notesInput.value = '';
   
   renderShopping();
