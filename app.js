@@ -32,7 +32,8 @@ let state = {
   scores: {},
   currentUser: null,
   currentPIN: '',
-  tempSelectedUserId: null
+  tempSelectedUserId: null,
+  shoppingNotes: ""
 };
 
 // אתחול האפליקציה
@@ -68,11 +69,29 @@ function initData() {
   // רשימת קניות לשנה הבאה
   const savedShopping = localStorage.getItem('family_school_shopping');
   if (savedShopping) {
-    state.shopping = JSON.parse(savedShopping);
+    state.shopping = JSON.parse(savedShopping).map(item => {
+      const qty = parseInt(item.quantity) || 1;
+      if (item.boughtQty === undefined) {
+        item.boughtQty = item.bought ? qty : 0;
+      }
+      item.bought = item.boughtQty >= qty;
+      return item;
+    });
   } else {
-    state.shopping = INITIAL_SHOPPING;
-    localStorage.setItem('family_school_shopping', JSON.stringify(INITIAL_SHOPPING));
+    state.shopping = INITIAL_SHOPPING.map(item => {
+      const qty = parseInt(item.quantity) || 1;
+      if (item.boughtQty === undefined) {
+        item.boughtQty = item.bought ? qty : 0;
+      }
+      item.bought = item.boughtQty >= qty;
+      return item;
+    });
+    localStorage.setItem('family_school_shopping', JSON.stringify(state.shopping));
   }
+
+  // הערות קניות משותפות
+  const savedNotes = localStorage.getItem('family_school_shopping_notes');
+  state.shoppingNotes = savedNotes || '';
 
   // נקודות ומשימות - מנגנון טעינה וסנכרון בטוח
   const currentScoresVersion = '1.2';
@@ -153,6 +172,15 @@ function saveShopping() {
   localStorage.setItem('family_school_shopping', JSON.stringify(state.shopping));
   db.collection('family_data').doc('school_shopping').set({ shopping: state.shopping })
     .catch(err => console.error("שגיאה בשמירת קניות לענן:", err));
+}
+
+function saveSharedNotes() {
+  const notesEl = document.getElementById('shoppingSharedNotes');
+  const notesText = notesEl ? notesEl.value : (state.shoppingNotes || '');
+  state.shoppingNotes = notesText;
+  localStorage.setItem('family_school_shopping_notes', notesText);
+  db.collection('family_data').doc('school_shopping_notes').set({ notes: notesText })
+    .catch(err => console.error("שגיאה בשמירת הערות קניות לענן:", err));
 }
 
 // פונקציית עזר למיזוג בטוח של ניקוד מקומי וניקוד בענן
@@ -258,7 +286,14 @@ function setupFirebaseSync() {
   db.collection('family_data').doc('school_shopping').onSnapshot((doc) => {
     if (doc.exists) {
       const data = doc.data();
-      state.shopping = data.shopping || [];
+      state.shopping = (data.shopping || []).map(item => {
+        const qty = parseInt(item.quantity) || 1;
+        if (item.boughtQty === undefined) {
+          item.boughtQty = item.bought ? qty : 0;
+        }
+        item.bought = item.boughtQty >= qty;
+        return item;
+      });
       renderAll();
     } else {
       // אם אין מסמך בענן, נשמור את הקניות המקומיות לענן
@@ -266,6 +301,23 @@ function setupFirebaseSync() {
     }
   }, (error) => {
     console.error("שגיאה בסנכרון קניות:", error);
+  });
+
+  // 4. מאזין להערות קניות משותפות
+  db.collection('family_data').doc('school_shopping_notes').onSnapshot((doc) => {
+    if (doc.exists) {
+      const data = doc.data();
+      const notesEl = document.getElementById('shoppingSharedNotes');
+      if (notesEl && document.activeElement !== notesEl) {
+        notesEl.value = data.notes || '';
+      }
+      state.shoppingNotes = data.notes || '';
+      localStorage.setItem('family_school_shopping_notes', state.shoppingNotes);
+    } else {
+      saveSharedNotes();
+    }
+  }, (error) => {
+    console.error("שגיאה בסנכרון הערות קניות:", error);
   });
 }
 
@@ -370,6 +422,21 @@ function setupEventListeners() {
   const filterShopStatus = document.getElementById('filterShopStatus');
   if (filterShopChild) filterShopChild.addEventListener('change', renderShopping);
   if (filterShopStatus) filterShopStatus.addEventListener('change', renderShopping);
+
+  // שמירה והתנהגות של הערות קניות משותפות
+  const btnSaveNotes = document.getElementById('btnSaveSharedNotes');
+  if (btnSaveNotes) {
+    btnSaveNotes.addEventListener('click', () => {
+      saveSharedNotes();
+      showToast('ההערות נשמרו בהצלחה! 📝', 'success');
+    });
+  }
+  const notesEl = document.getElementById('shoppingSharedNotes');
+  if (notesEl) {
+    notesEl.addEventListener('blur', () => {
+      saveSharedNotes();
+    });
+  }
 
   // פתיחת מודאל הוספת פעילות
   const btnOpenActivityModal = document.getElementById('btnOpenActivityModal');
@@ -1130,10 +1197,9 @@ function getCombinedShoppingItems(items) {
     }
     
     const qty = parseInt(item.quantity) || 1;
+    const bQty = parseInt(item.boughtQty) || 0;
     combined[key].quantity += qty;
-    if (item.bought) {
-      combined[key].boughtQuantity += qty;
-    }
+    combined[key].boughtQuantity += bQty;
     
     if (!combined[key].childrenList.includes(item.child)) {
       combined[key].childrenList.push(item.child);
@@ -1147,7 +1213,7 @@ function getCombinedShoppingItems(items) {
   });
   
   return Object.values(combined).map((c, index) => {
-    const allBought = c.items.every(i => i.bought);
+    const allBought = c.items.every(i => (parseInt(i.boughtQty) || 0) >= (parseInt(i.quantity) || 1));
     const uniqueNotes = [...new Set(c.notes)].join(' ; ');
     
     return {
@@ -1169,15 +1235,27 @@ function renderShopping() {
   const shopContainer = document.getElementById('shoppingListContainer');
   if (!shopContainer) return;
 
-  // הסתרת טופס הוספה והתאמת גריד
+  // טופס ההוספה פתוח להורים ולילדים
   const sideFormCard = document.querySelector('.side-form-card');
   if (sideFormCard) {
-    sideFormCard.style.display = isParent() ? 'block' : 'none';
+    sideFormCard.style.display = 'block';
   }
   const shoppingLayout = document.querySelector('.shopping-layout');
   if (shoppingLayout) {
-    shoppingLayout.style.gridTemplateColumns = isParent() ? '2fr 1fr' : '1fr';
+    shoppingLayout.style.gridTemplateColumns = '2fr 1fr';
   }
+  
+  // הגבלת אפשרויות לילדים בטופס הוספה
+  const shopChildSelect = document.getElementById('shopChild');
+  if (shopChildSelect) {
+    if (isParent()) {
+      shopChildSelect.disabled = false;
+    } else {
+      shopChildSelect.value = state.currentUser || 'all';
+      shopChildSelect.disabled = true;
+    }
+  }
+
   const filterShopChildEl = document.getElementById('filterShopChild');
   if (filterShopChildEl) {
     filterShopChildEl.style.display = isParent() ? 'inline-block' : 'none';
@@ -1226,6 +1304,8 @@ function renderShopping() {
       boughtCount += qty;
     } else if (typeof i.boughtQuantity === 'number') {
       boughtCount += i.boughtQuantity;
+    } else if (typeof i.boughtQty === 'number') {
+      boughtCount += i.boughtQty;
     }
   });
 
@@ -1288,8 +1368,34 @@ function renderShopping() {
     }
 
     const qty = parseInt(item.quantity) || 1;
-    const qtyText = qty > 1 ? `<span class="quantity-badge" style="background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; margin-right: 8px;">כמות: ${qty}</span>` : '';
+    const bQty = item.constituentIds ? (parseInt(item.boughtQuantity) || 0) : (parseInt(item.boughtQty) || 0);
+    const isFullyBought = bQty >= qty;
+    const isPartiallyBought = bQty > 0 && bQty < qty;
+
+    let checkboxContent = '';
+    let checkboxBg = 'transparent';
+    if (isFullyBought) {
+      checkboxBg = childColor === 'var(--color-all)' ? 'var(--primary)' : childColor;
+      checkboxContent = '<span style="color:white; font-size:0.75rem; font-weight:bold;">✓</span>';
+    } else if (isPartiallyBought) {
+      checkboxBg = childColor === 'var(--color-all)' ? 'var(--primary)80' : childColor + '80';
+      checkboxContent = '<span style="color:white; font-size:0.85rem; font-weight:bold; line-height: 1;">•</span>';
+    }
+
+    const checkboxStyle = `border-radius:50%; width:24px; height:24px; border-color:${childColor}; background:${checkboxBg}; display:flex; align-items:center; justify-content:center; flex-shrink:0;`;
     
+    let stepperHTML = '';
+    if (qty > 1) {
+      const constituentIdsArg = item.constituentIds ? `'${item.constituentIds}'` : 'null';
+      stepperHTML = `
+        <div class="stepper-container" onclick="event.stopPropagation();">
+          <button class="btn-step" onclick="adjustBoughtQty('${item.id}', -1, ${constituentIdsArg}, event)">-</button>
+          <span class="step-value">${bQty} / ${qty}</span>
+          <button class="btn-step" onclick="adjustBoughtQty('${item.id}', 1, ${constituentIdsArg}, event)">+</button>
+        </div>
+      `;
+    }
+
     const onclickStr = item.constituentIds 
       ? `toggleShopItem('${item.id}', '${item.constituentIds}')`
       : `toggleShopItem('${item.id}')`;
@@ -1299,27 +1405,81 @@ function renderShopping() {
       : '';
 
     row.innerHTML = `
-      <div class="shop-item-info" onclick="${onclickStr}" style="cursor:pointer;">
-        <div class="task-checkbox" style="border-radius:50%; width:24px; height:24px; border-color:${childColor};"></div>
+      <div class="shop-item-info" onclick="${onclickStr}" style="cursor:pointer; display:flex; align-items:center; gap:12px; flex:1;">
+        <div class="task-checkbox" style="${checkboxStyle}">${checkboxContent}</div>
         <div class="shop-item-details">
-          <span class="shop-item-title">${item.title} ${qtyText}</span>
+          <span class="shop-item-title">${item.title} ${qty > 1 && !item.constituentIds ? `<span class="quantity-badge" style="background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; margin-right: 8px;">כמות: ${qty}</span>` : ''}</span>
           <div class="shop-item-meta">
             ${badgesHTML}
             ${item.notes ? `<span>• ${item.notes}</span>` : ''}
           </div>
         </div>
       </div>
-      ${deleteBtn}
+      <div style="display:flex; align-items:center; gap:8px;">
+        ${stepperHTML}
+        ${deleteBtn}
+      </div>
     `;
     
-    if (item.bought) {
-      row.querySelector('.task-checkbox').style.background = childColor === 'var(--color-all)' ? 'var(--primary)' : childColor;
-      row.querySelector('.task-checkbox').innerHTML = '<span style="color:white; font-size:0.75rem; font-weight:bold;">✓</span>';
-    }
-
     shopContainer.appendChild(row);
   });
+
+  // סנכרון שדה הערות משותפות
+  const notesEl = document.getElementById('shoppingSharedNotes');
+  if (notesEl && document.activeElement !== notesEl) {
+    notesEl.value = state.shoppingNotes || '';
+  }
 }
+
+// התאמת כמות קנויה פריט פריט
+window.adjustBoughtQty = function(itemId, delta, constituentIdsStr, event) {
+  if (event) event.stopPropagation();
+  
+  if (constituentIdsStr) {
+    const ids = constituentIdsStr.split(',');
+    const items = state.shopping.filter(i => ids.includes(i.id));
+    if (items.length > 0) {
+      if (delta > 0) {
+        const target = items.find(i => (parseInt(i.boughtQty) || 0) < (parseInt(i.quantity) || 1));
+        if (target) {
+          target.boughtQty = (parseInt(target.boughtQty) || 0) + 1;
+          target.bought = target.boughtQty >= (parseInt(target.quantity) || 1);
+        }
+      } else if (delta < 0) {
+        const target = items.find(i => (parseInt(i.boughtQty) || 0) > 0);
+        if (target) {
+          target.boughtQty = (parseInt(target.boughtQty) || 0) - 1;
+          target.bought = target.boughtQty >= (parseInt(target.quantity) || 1);
+        }
+      }
+      saveShopping();
+      renderShopping();
+      const title = items[0].title;
+      let totalBought = 0;
+      let totalQty = 0;
+      items.forEach(i => {
+        totalBought += (parseInt(i.boughtQty) || 0);
+        totalQty += (parseInt(i.quantity) || 1);
+      });
+      showToast(`עודכן: ${title} (${totalBought}/${totalQty})`, 'info');
+    }
+  } else {
+    const item = state.shopping.find(i => i.id === itemId);
+    if (item) {
+      const qty = parseInt(item.quantity) || 1;
+      let current = parseInt(item.boughtQty) || 0;
+      current += delta;
+      if (current < 0) current = 0;
+      if (current > qty) current = qty;
+      item.boughtQty = current;
+      item.bought = current >= qty;
+      
+      saveShopping();
+      renderShopping();
+      showToast(`עודכן: ${item.title} (${item.boughtQty}/${item.quantity})`, 'info');
+    }
+  }
+};
 
 // שינוי סטטוס קנייה
 window.toggleShopItem = function(itemId, constituentIdsStr) {
@@ -1327,8 +1487,12 @@ window.toggleShopItem = function(itemId, constituentIdsStr) {
     const ids = constituentIdsStr.split(',');
     const items = state.shopping.filter(i => ids.includes(i.id));
     if (items.length > 0) {
-      const allBought = items.every(i => i.bought);
-      items.forEach(i => i.bought = !allBought);
+      const allBought = items.every(i => (parseInt(i.boughtQty) || 0) >= (parseInt(i.quantity) || 1));
+      items.forEach(i => {
+        const qty = parseInt(i.quantity) || 1;
+        i.boughtQty = !allBought ? qty : 0;
+        i.bought = !allBought;
+      });
       saveShopping();
       renderShopping();
       const title = items[0].title;
@@ -1337,7 +1501,11 @@ window.toggleShopItem = function(itemId, constituentIdsStr) {
   } else {
     const item = state.shopping.find(i => i.id === itemId);
     if (item) {
-      item.bought = !item.bought;
+      const qty = parseInt(item.quantity) || 1;
+      const fullyBought = (parseInt(item.boughtQty) || 0) >= qty;
+      item.boughtQty = !fullyBought ? qty : 0;
+      item.bought = !fullyBought;
+      
       saveShopping();
       renderShopping();
       showToast(item.bought ? `סומן כ"נקנה": ${item.title}` : `סומן כ"צריך לקנות": ${item.title}`, 'info');
@@ -1381,6 +1549,7 @@ function handleAddShopSubmit(e) {
     title,
     child,
     quantity,
+    boughtQty: 0,
     bought: false,
     notes
   };

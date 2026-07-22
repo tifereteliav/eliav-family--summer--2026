@@ -223,6 +223,15 @@
           <div class="shopping-list-container" id="shoppingListContainer">
             <!-- יתרנדר דינמית ע"י JS -->
           </div>
+
+          <!-- הערות משפחתיות פתוחות לכולם -->
+          <div class="shopping-notes-section" style="margin-top: 30px; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 20px;">
+            <h3>📝 הערות וציוד נוסף שצריך לקנות (פתוח לילדים והורים)</h3>
+            <textarea id="shoppingSharedNotes" class="filter-input" rows="4" placeholder="כתבו כאן הערות חופשיות או ציוד נוסף שחסר... (למשל: הילה צריכה גם קלמר חדש, אריאל צריך תיק גב כחול...)" style="resize: vertical; margin-top: 10px; width: 100%; font-family: inherit;"></textarea>
+            <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+              <button id="btnSaveSharedNotes" class="btn-primary" style="font-size: 0.85rem; padding: 6px 14px;">💾 שמור הערה</button>
+            </div>
+          </div>
         </section>
 
         <!-- טופס הוספת פריט (עמודה שמאל) -->

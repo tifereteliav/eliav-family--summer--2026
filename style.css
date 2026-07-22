@@ -1469,3 +1469,62 @@ header.app-header {
   font-size: 1.25rem;
   color: var(--text-muted);
 }
+
+/* פריטי קניות - כמות ופקדי כמות */
+.stepper-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f3f5;
+  padding: 4px 8px;
+  border-radius: 20px;
+  margin-right: 12px;
+  margin-left: 12px;
+}
+
+.btn-step {
+  background: white;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--text-dark);
+  transition: var(--transition-smooth);
+}
+
+.btn-step:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.step-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  min-width: 32px;
+  text-align: center;
+}
+
+/* הערות קניות משותפות */
+.shopping-notes-section {
+  background: #fffcf6;
+  border: 1px solid rgba(255, 165, 0, 0.15);
+  border-radius: var(--card-border-radius);
+  padding: 18px;
+}
+
+.shopping-notes-section h3 {
+  font-size: 1.1rem;
+  color: var(--text-dark);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
