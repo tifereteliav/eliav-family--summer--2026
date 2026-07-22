@@ -74,29 +74,51 @@ function initData() {
     localStorage.setItem('family_summer_shopping', JSON.stringify(INITIAL_SHOPPING));
   }
 
-  // נקודות ומשימות - מנגנון איפוס נקודות חד-פעמי
-  const currentScoresVersion = '1.2'; // גרסה חדשה המאלצת איפוס בדפדפן של המשתמש
+  // נקודות ומשימות - מנגנון טעינה וסנכרון בטוח
+  const currentScoresVersion = '1.2';
   const savedVersion = localStorage.getItem('family_summer_scores_version');
+  const savedScores = localStorage.getItem('family_summer_scores');
   
-  if (savedVersion !== currentScoresVersion) {
-    // איפוס: כולם על 0, למוריה 30 נקודות פתיחה בתאריך תחילת הקיץ (06/07)
+  if (savedScores) {
+    try {
+      state.scores = JSON.parse(savedScores);
+    } catch (e) {
+      state.scores = {};
+    }
+  } else {
+    // אתחול ראשוני רק אם אין נתונים בכלל
     state.scores = {
       '2026-07-06': {
         'moriah': {
           tasks: {},
-          custom: [{ id: 'init_moriah', reason: 'נקודות פתיחה', points: 30 }]
+          custom: [
+            { id: 'init_moriah', reason: 'נקודות פתיחה', points: 30 },
+            { id: 'restore_moriah', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 180 }
+          ]
+        },
+        'ariel': {
+          tasks: {},
+          custom: [{ id: 'restore_ariel', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 107 }]
+        },
+        'hila': {
+          tasks: {},
+          custom: [{ id: 'restore_hila', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 184 }]
+        },
+        'shira': {
+          tasks: {},
+          custom: [{ id: 'restore_shira', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 30 }]
+        },
+        'talia': {
+          tasks: {},
+          custom: [{ id: 'restore_talia', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 20 }]
         }
       }
     };
-    saveScores();
+  }
+
+  // עדכון גרסה מקומי ב-localStorage ללא דריסת הנתונים הקיימים
+  if (savedVersion !== currentScoresVersion) {
     localStorage.setItem('family_summer_scores_version', currentScoresVersion);
-  } else {
-    const savedScores = localStorage.getItem('family_summer_scores');
-    if (savedScores) {
-      state.scores = JSON.parse(savedScores);
-    } else {
-      state.scores = {};
-    }
   }
 
   // משתמש פעיל
@@ -133,16 +155,85 @@ function saveShopping() {
     .catch(err => console.error("שגיאה בשמירת קניות לענן:", err));
 }
 
+// פונקציית עזר למיזוג בטוח של ניקוד מקומי וניקוד בענן
+function mergeScores(local, remote) {
+  const result = {};
+
+  const allDates = new Set([
+    ...Object.keys(local || {}),
+    ...Object.keys(remote || {})
+  ]);
+
+  for (const dateKey of allDates) {
+    result[dateKey] = {};
+    const localDay = (local && local[dateKey]) || {};
+    const remoteDay = (remote && remote[dateKey]) || {};
+
+    const allChildren = new Set([
+      ...Object.keys(localDay),
+      ...Object.keys(remoteDay)
+    ]);
+
+    for (const childId of allChildren) {
+      result[dateKey][childId] = {
+        tasks: {},
+        custom: []
+      };
+
+      const localChild = localDay[childId] || {};
+      const remoteChild = remoteDay[childId] || {};
+
+      // מיזוג משימות (אם בוצע באחד הצדדים - מסומן כבוצע)
+      const localTasks = localChild.tasks || {};
+      const remoteTasks = remoteChild.tasks || {};
+      const allTasks = new Set([
+        ...Object.keys(localTasks),
+        ...Object.keys(remoteTasks)
+      ]);
+      for (const taskId of allTasks) {
+        result[dateKey][childId].tasks[taskId] = !!(localTasks[taskId] || remoteTasks[taskId]);
+      }
+
+      // מיזוג נקודות מיוחדות לפי מזהה ייחודי (ID)
+      const localCustom = localChild.custom || [];
+      const remoteCustom = remoteChild.custom || [];
+      const customMap = new Map();
+      remoteCustom.forEach(item => {
+        if (item && item.id) customMap.set(item.id, item);
+      });
+      localCustom.forEach(item => {
+        if (item && item.id) customMap.set(item.id, item);
+      });
+      result[dateKey][childId].custom = Array.from(customMap.values());
+    }
+  }
+
+  return result;
+}
+
 // הגדרת סנכרון Firebase בזמן אמת מול הענן
 function setupFirebaseSync() {
   // 1. מאזין לניקוד ומשימות
   db.collection('family_data').doc('scores').onSnapshot((doc) => {
     if (doc.exists) {
       const data = doc.data();
-      state.scores = data.scores || {};
+      const remoteScores = data.scores || {};
+      
+      // מיזוג נתונים מקומיים עם נתוני הענן
+      const mergedScores = mergeScores(state.scores, remoteScores);
+      
+      // בדיקה האם יש הבדל בין המיזוג לנתוני הענן. אם כן, נעדכן את הענן
+      if (JSON.stringify(mergedScores) !== JSON.stringify(remoteScores)) {
+        db.collection('family_data').doc('scores').set({ scores: mergedScores })
+          .catch(err => console.error("שגיאה בשמירת ניקוד מעודכן לענן:", err));
+      }
+      
+      // עדכון ה-state וה-localStorage בנתונים הממוזגים
+      state.scores = mergedScores;
+      localStorage.setItem('family_summer_scores', JSON.stringify(mergedScores));
       renderAll();
     } else {
-      // אם אין מסמך בענן, נשמור את הניקוד המקומי הקיים לענן כדי לאתחל אותו
+      // אם אין מסמך בענן בכלל, נשמור את הניקוק המקומי הקיים לענן
       saveScores();
     }
   }, (error) => {
