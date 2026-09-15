@@ -73,6 +73,44 @@ header.app-header {
   overflow: hidden;
 }
 
+/* בורר מצב אפליקציה: חופש גדול / שגרה */
+.mode-switcher-container {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.mode-btn {
+  padding: 10px 22px;
+  border-radius: 30px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.75);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--text-dark);
+  transition: var(--transition-smooth);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.mode-btn:hover {
+  transform: translateY(-2px);
+  background: white;
+}
+
+.mode-btn.active[data-mode="summer"] {
+  background: linear-gradient(135deg, #ff8c00 0%, #ff6b6b 100%);
+  color: white;
+  box-shadow: 0 6px 16px rgba(255, 140, 0, 0.35);
+}
+
+.mode-btn.active[data-mode="routine"] {
+  background: linear-gradient(135deg, #4dabf7 0%, #15aabf 100%);
+  color: white;
+  box-shadow: 0 6px 16px rgba(77, 171, 247, 0.35);
+}
+
 header.app-header::before {
   content: '';
   position: absolute;
@@ -147,15 +185,16 @@ header.app-header::before {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- סיכום משפחתי --- */
+/* --- סיכום משפחתי עליון --- */
 .family-summary-bar {
-  background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   color: var(--text-light);
   border-radius: var(--card-border-radius);
-  padding: 20px;
+  padding: 22px;
   margin-bottom: 25px;
   display: flex;
   justify-content: space-around;
+  align-items: center;
   flex-wrap: wrap;
   gap: 20px;
   box-shadow: var(--glass-shadow);
@@ -165,7 +204,16 @@ header.app-header::before {
 .summary-item {
   text-align: center;
   flex: 1;
-  min-width: 200px;
+  min-width: 180px;
+}
+
+.summary-item.family-outing-item {
+  flex: 2;
+  min-width: 280px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  padding: 12px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .summary-label {
@@ -179,6 +227,37 @@ header.app-header::before {
   font-weight: 800;
   color: #f1c40f;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.outing-count {
+  font-size: 1.6rem;
+  color: #38bdf8;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.summary-outing-progress {
+  margin-top: 8px;
+}
+
+.outing-track {
+  height: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.outing-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b 0%, #10b981 100%);
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+
+.outing-subtext {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  display: block;
+  margin-top: 4px;
 }
 
 /* --- אזור 1: לוח ניקוד --- */
@@ -412,6 +491,127 @@ header.app-header::before {
   font-weight: 600;
   color: #27ae60;
   margin-top: 4px;
+}
+
+/* --- כרטיס ארנק אישי לילד/ה --- */
+.child-wallet-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+  border: 2px solid var(--child-color);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.04);
+  position: relative;
+  overflow: hidden;
+}
+
+.child-wallet-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 5px;
+  background: var(--child-color);
+}
+
+.wallet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.wallet-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.wallet-badge {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.wallet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.wallet-stat {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+
+.wallet-stat.main-balance {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #6ee7b7;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.stat-value.highlight { color: #2563eb; }
+.stat-value.given { color: #d97706; }
+.stat-value.balance { color: #059669; font-size: 1.5rem; }
+
+.wallet-parent-actions {
+  background: #f8fafc;
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 15px;
+  margin-top: 10px;
+}
+
+.wallet-parent-actions h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--text-dark);
+}
+
+.wallet-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.wallet-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.wallet-history-item {
+  font-size: 0.88rem;
+  background: white;
 }
 
 /* בר ההתקדמות */
@@ -1392,7 +1592,7 @@ header.app-header {
 
 /* מודאל הקשת קוד סודי */
 #pinCodeModal {
-  z-index: 1600;
+  z-index: 3000 !important;
 }
 
 .pin-modal-content {

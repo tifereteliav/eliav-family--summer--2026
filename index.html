@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>הקיץ של משפחת אליאב 2026</title>
-  <link rel="stylesheet" href="style.css?v=3.2">
+  <link rel="stylesheet" href="style.css?v=6.0">
 </head>
 <body>
 
@@ -12,9 +12,15 @@
     
     <!-- כותרת עליונה -->
     <header class="app-header">
+      <!-- בורר מצב אפליקציה: חופש גדול / זמני שגרה -->
+      <div class="mode-switcher-container">
+        <button class="mode-btn active" data-mode="summer" id="modeSummerBtn">☀️ חופש גדול (קיץ)</button>
+        <button class="mode-btn" data-mode="routine" id="modeRoutineBtn">🏫 זמני שגרה</button>
+      </div>
+
       <div class="header-main-content">
-        <h1 class="header-title">הקיץ של משפחת אליאב ☀️</h1>
-        <p class="header-subtitle">אפליקציית משימות ולוז קיץ להורים עמית ותפארת, והילדים הילה, מוריה, אריאל, שירה וטליה</p>
+        <h1 class="header-title" id="appHeaderTitle">הקיץ של משפחת אליאב ☀️</h1>
+        <p class="header-subtitle" id="appHeaderSubtitle">אפליקציית משימות ולוז קיץ להורים עמית ותפארת, והילדים הילה, מוריה, אריאל, שירה וטליה</p>
       </div>
       <div class="user-profile-status-bar" id="userProfileStatusBar" style="display:none;">
         <div class="user-status-info">
@@ -32,11 +38,21 @@
       <button class="nav-tab" data-tab="shopping" id="tabShopping">🛒 קניות וציוד לשנה הבאה</button>
     </nav>
 
-    <!-- סיכום משפחתי עליון -->
+    <!-- סיכום משפחתי עליון + מד יציאה משפחתית -->
     <section class="family-summary-bar">
       <div class="summary-item">
         <div class="summary-label">🌟 סך הכל נקודות משפחתי</div>
         <div class="summary-value" id="familyTotalPoints">0 נק'</div>
+      </div>
+      <div class="summary-item family-outing-item">
+        <div class="summary-label">🎡 יציאה משפחתית כיפית (כל 5,000 נק')</div>
+        <div class="summary-value outing-count" id="familyOutingsCount">0 יציאות!</div>
+        <div class="summary-outing-progress">
+          <div class="outing-track">
+            <div class="outing-fill" id="familyOutingFill" style="width:0%;"></div>
+          </div>
+          <span class="outing-subtext" id="familyOutingSubtext">עוד 5,000 נק' ליציאה הבאה</span>
+        </div>
       </div>
     </section>
 
@@ -72,13 +88,52 @@
             <div class="status-child-info">
               <div class="status-avatar" id="selectedChildAvatar">👧</div>
               <div class="status-texts">
-                <h2 id="selectedChildName">הישגים לקיץ</h2>
+                <h2 id="selectedChildName">הישגים</h2>
                 <p style="color:var(--text-muted); font-size:0.9rem;">עבור התאריך המוצג למעלה</p>
               </div>
             </div>
             <div class="status-financial-summary" style="display: flex; flex-direction: column; align-items: flex-end;">
               <div class="points-sum" id="selectedChildPoints">0 נקודות</div>
               <div class="points-day-sum" id="selectedChildDayPoints" style="font-size: 1.05rem; font-weight: 600; color: var(--text-muted); margin-top: 4px;">0 נקודות ביום זה</div>
+            </div>
+          </div>
+
+          <!-- כרטיס ארנק אישי לילד/ה -->
+          <div class="child-wallet-card" id="childWalletCard">
+            <div class="wallet-header">
+              <div class="wallet-title">👛 ארנק אישי - <span id="walletChildName">הילה</span></div>
+              <div class="wallet-badge">100 נקודות = 5 ₪</div>
+            </div>
+            <div class="wallet-grid">
+              <div class="wallet-stat">
+                <span class="stat-label">⭐ סך נקודות מצטבר</span>
+                <span class="stat-value" id="walletTotalPoints">0 נק'</span>
+              </div>
+              <div class="wallet-stat">
+                <span class="stat-label">💰 שווי כספי מניקוד</span>
+                <span class="stat-value highlight" id="walletTotalMoney">0 ₪</span>
+              </div>
+              <div class="wallet-stat">
+                <span class="stat-label">💵 מזומן שניתן כבר</span>
+                <span class="stat-value given" id="walletGivenMoney">0 ₪</span>
+              </div>
+              <div class="wallet-stat main-balance">
+                <span class="stat-label">💳 יתרה זמינה בארנק</span>
+                <span class="stat-value balance" id="walletBalanceMoney">0 ₪</span>
+              </div>
+            </div>
+            
+            <!-- אזור הורים: מריטה / מתן כסף מזומן -->
+            <div class="wallet-parent-actions" id="walletParentActions">
+              <h4>💸 מתן מזומן / עדכון ארנק (על ידי ההורים)</h4>
+              <form class="wallet-form" id="walletPayoutForm">
+                <input type="text" id="walletReason" class="custom-input input-reason" placeholder="סיבה (למשל: נתנו 20 שח במזומן, קניית צעצוע...)" required>
+                <input type="number" id="walletAmount" class="custom-input input-amount" placeholder="סכום ב-₪" step="0.5" required>
+                <button type="submit" class="btn-primary">עדכן מזומן</button>
+              </form>
+              <div class="wallet-history" id="walletHistory">
+                <!-- יתרנדר דינמית -->
+              </div>
             </div>
           </div>
 
@@ -403,7 +458,7 @@
     <div class="modal-content pin-modal-content">
       <button class="modal-close" onclick="closePinModal()">×</button>
       <h2 class="modal-title">🔑 קוד סודי להורים</h2>
-      <p style="text-align:center; color:var(--text-muted); margin-bottom:15px;" id="pinModalInstructions">נא להזין קוד סודי בן 6 ספרות</p>
+      <p style="text-align:center; color:var(--text-muted); margin-bottom:15px;" id="pinModalInstructions">נא להזין קוד סודי בן 6 ספרות (קוד מנהלים: 208000)</p>
       
       <!-- תצוגת הקוד המוזן -->
       <div class="pin-display-container">
@@ -443,7 +498,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <!-- טעינת קבצי ה-JS עם מנגנון מניעת מטמון -->
-  <script src="data.js?v=3.2"></script>
-  <script src="app.js?v=3.2"></script>
+  <script src="data.js?v=6.0"></script>
+  <script src="app.js?v=6.0"></script>
 </body>
 </html>

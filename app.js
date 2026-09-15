@@ -23,17 +23,63 @@ const db = firebase.firestore();
 
 // ניהול המדינה (State) של האפליקציה
 let state = {
+  appMode: 'summer', // 'summer' | 'routine'
   currentDate: new Date(), // תאריך היום כברירת מחדל
   activeChildId: 'hila',
   activeTab: 'scoreboard',
   children: [],
-  events: [],
-  shopping: [],
-  scores: {},
+  summerEvents: [],
+  routineEvents: [],
+  summerShopping: [],
+  routineShopping: [],
+  summerScores: {},
+  routineScores: {},
+  wallets: {}, // { childId: [ { id, date, reason, amount } ] }
   currentUser: null,
   currentPIN: '',
   tempSelectedUserId: null
 };
+
+// פונקציות עזר לקבלת הנתונים הפעילים לפי המצב הנבחר (קיץ/שגרה)
+function getActiveTasks() {
+  return state.appMode === 'routine' ? DEFAULT_ROUTINE_TASKS : DEFAULT_TASKS;
+}
+
+function getActiveScores() {
+  return state.appMode === 'routine' ? state.routineScores : state.summerScores;
+}
+
+function setActiveScores(newScores) {
+  if (state.appMode === 'routine') {
+    state.routineScores = newScores;
+  } else {
+    state.summerScores = newScores;
+  }
+}
+
+function getActiveEvents() {
+  return state.appMode === 'routine' ? state.routineEvents : state.summerEvents;
+}
+
+function setActiveEvents(newEvents) {
+  if (state.appMode === 'routine') {
+    state.routineEvents = newEvents;
+  } else {
+    state.summerEvents = newEvents;
+  }
+}
+
+function getActiveShopping() {
+  return state.appMode === 'routine' ? state.routineShopping : state.summerShopping;
+}
+
+function setActiveShopping(newShopping) {
+  if (state.appMode === 'routine') {
+    state.routineShopping = newShopping;
+  } else {
+    state.summerShopping = newShopping;
+  }
+}
 
 // אתחול האפליקציה
 document.addEventListener('DOMContentLoaded', () => {
@@ -45,8 +91,46 @@ document.addEventListener('DOMContentLoaded', () => {
   showToast('האפליקציה נטענה בהצלחה! ☀️', 'success');
 });
 
+// עוזרי הצגת/הסתרת מסך כניסה
+function hidePortal() {
+  const portal = document.getElementById('profileSelectionPortal');
+  if (portal) {
+    portal.classList.remove('active');
+    portal.style.setProperty('display', 'none', 'important');
+  }
+}
+
+function showPortal() {
+  const portal = document.getElementById('profileSelectionPortal');
+  if (portal) {
+    portal.style.setProperty('display', 'flex', 'important');
+    portal.classList.add('active');
+  }
+}
+
+// משתמש פעיל
+function checkActiveUser() {
+  const savedUser = localStorage.getItem('family_summer_active_user');
+  if (savedUser) {
+    state.currentUser = savedUser;
+    if (savedUser !== 'parent_amit' && savedUser !== 'parent_tiferet') {
+      state.activeChildId = savedUser;
+    }
+    hidePortal();
+  } else {
+    state.currentUser = null;
+    showPortal();
+  }
+}
+
 // טעינת נתונים או אתחולם מנתוני ברירת המחדל ב-data.js
 function initData() {
+  // מצב אפליקציה (קיץ / שגרה)
+  const savedMode = localStorage.getItem('family_app_mode');
+  if (savedMode === 'routine' || savedMode === 'summer') {
+    state.appMode = savedMode;
+  }
+
   // ילדים
   const savedChildren = localStorage.getItem('family_summer_children');
   if (savedChildren) {
@@ -56,118 +140,133 @@ function initData() {
     localStorage.setItem('family_summer_children', JSON.stringify(INITIAL_CHILDREN));
   }
 
-  // פעילויות / אירועים
+  // פעילויות קיץ
   const savedEvents = localStorage.getItem('family_summer_events');
   if (savedEvents) {
-    state.events = JSON.parse(savedEvents);
+    state.summerEvents = JSON.parse(savedEvents);
   } else {
-    state.events = INITIAL_EVENTS;
+    state.summerEvents = INITIAL_EVENTS;
     localStorage.setItem('family_summer_events', JSON.stringify(INITIAL_EVENTS));
   }
 
-  // רשימת קניות לשנה הבאה
+  // פעילויות שגרה - טעינה מנתוני הלו"ז המעודכנים
+  state.routineEvents = typeof INITIAL_ROUTINE_EVENTS !== 'undefined' ? INITIAL_ROUTINE_EVENTS : [];
+  localStorage.setItem('family_routine_events', JSON.stringify(state.routineEvents));
+
+  // קניות קיץ
   const savedShopping = localStorage.getItem('family_school_shopping');
   if (savedShopping) {
-    state.shopping = JSON.parse(savedShopping).map(item => {
+    state.summerShopping = JSON.parse(savedShopping).map(item => {
       const qty = parseInt(item.quantity) || 1;
-      if (item.boughtQty === undefined) {
-        item.boughtQty = item.bought ? qty : 0;
-      }
+      if (item.boughtQty === undefined) item.boughtQty = item.bought ? qty : 0;
       item.bought = item.boughtQty >= qty;
       return item;
     });
   } else {
-    state.shopping = INITIAL_SHOPPING.map(item => {
+    state.summerShopping = INITIAL_SHOPPING.map(item => {
       const qty = parseInt(item.quantity) || 1;
-      if (item.boughtQty === undefined) {
-        item.boughtQty = item.bought ? qty : 0;
-      }
+      if (item.boughtQty === undefined) item.boughtQty = item.bought ? qty : 0;
       item.bought = item.boughtQty >= qty;
       return item;
     });
-    localStorage.setItem('family_school_shopping', JSON.stringify(state.shopping));
+    localStorage.setItem('family_school_shopping', JSON.stringify(state.summerShopping));
   }
 
-
-  // נקודות ומשימות - מנגנון טעינה וסנכרון בטוח
-  const currentScoresVersion = '1.2';
-  const savedVersion = localStorage.getItem('family_summer_scores_version');
-  const savedScores = localStorage.getItem('family_summer_scores');
-  
-  if (savedScores) {
-    try {
-      state.scores = JSON.parse(savedScores);
-    } catch (e) {
-      state.scores = {};
-    }
+  // קניות שגרה
+  const savedRoutineShopping = localStorage.getItem('family_routine_shopping');
+  if (savedRoutineShopping) {
+    state.routineShopping = JSON.parse(savedRoutineShopping).map(item => {
+      const qty = parseInt(item.quantity) || 1;
+      if (item.boughtQty === undefined) item.boughtQty = item.bought ? qty : 0;
+      item.bought = item.boughtQty >= qty;
+      return item;
+    });
   } else {
-    // אתחול ראשוני רק אם אין נתונים בכלל
-    state.scores = {
+    state.routineShopping = (typeof INITIAL_ROUTINE_SHOPPING !== 'undefined' ? INITIAL_ROUTINE_SHOPPING : []).map(item => {
+      const qty = parseInt(item.quantity) || 1;
+      if (item.boughtQty === undefined) item.boughtQty = item.bought ? qty : 0;
+      item.bought = item.boughtQty >= qty;
+      return item;
+    });
+    localStorage.setItem('family_routine_shopping', JSON.stringify(state.routineShopping));
+  }
+
+  // ניקוד קיץ
+  const savedSummerScores = localStorage.getItem('family_summer_scores');
+  if (savedSummerScores) {
+    try { state.summerScores = JSON.parse(savedSummerScores); } catch (e) { state.summerScores = {}; }
+  } else {
+    state.summerScores = {
       '2026-07-06': {
-        'moriah': {
-          tasks: {},
-          custom: [
-            { id: 'init_moriah', reason: 'נקודות פתיחה', points: 30 },
-            { id: 'restore_moriah', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 180 }
-          ]
-        },
-        'ariel': {
-          tasks: {},
-          custom: [{ id: 'restore_ariel', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 107 }]
-        },
-        'hila': {
-          tasks: {},
-          custom: [{ id: 'restore_hila', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 184 }]
-        },
-        'shira': {
-          tasks: {},
-          custom: [{ id: 'restore_shira', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 30 }]
-        },
-        'talia': {
-          tasks: {},
-          custom: [{ id: 'restore_talia', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 20 }]
-        }
+        'moriah': { tasks: {}, custom: [{ id: 'init_moriah', reason: 'נקודות פתיחה', points: 30 }, { id: 'restore_moriah', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 180 }] },
+        'ariel': { tasks: {}, custom: [{ id: 'restore_ariel', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 107 }] },
+        'hila': { tasks: {}, custom: [{ id: 'restore_hila', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 184 }] },
+        'shira': { tasks: {}, custom: [{ id: 'restore_shira', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 30 }] },
+        'talia': { tasks: {}, custom: [{ id: 'restore_talia', reason: 'שחזור נקודות שהוכנסו ונמחקו', points: 20 }] }
       }
     };
   }
 
-  // עדכון גרסה מקומי ב-localStorage ללא דריסת הנתונים הקיימים
-  if (savedVersion !== currentScoresVersion) {
-    localStorage.setItem('family_summer_scores_version', currentScoresVersion);
+  // ניקוד שגרה
+  const savedRoutineScores = localStorage.getItem('family_routine_scores');
+  if (savedRoutineScores) {
+    try { state.routineScores = JSON.parse(savedRoutineScores); } catch (e) { state.routineScores = {}; }
+  } else {
+    state.routineScores = {};
   }
 
-  // משתמש פעיל
-  const savedUser = localStorage.getItem('family_summer_active_user');
-  const portal = document.getElementById('profileSelectionPortal');
-  if (savedUser) {
-    state.currentUser = savedUser;
-    if (savedUser !== 'parent_amit' && savedUser !== 'parent_tiferet') {
-      state.activeChildId = savedUser;
-    }
-    if (portal) portal.classList.remove('active');
+  // ארנק אישי לילדים (מריטות/מתן מזומן)
+  const savedWallets = localStorage.getItem('family_wallets');
+  if (savedWallets) {
+    try { state.wallets = JSON.parse(savedWallets); } catch (e) { state.wallets = {}; }
   } else {
-    state.currentUser = null;
-    if (portal) portal.classList.add('active');
+    state.wallets = {};
   }
+
+  checkActiveUser();
 }
 
 // שמירת נתונים בענן (Firebase) ובגיבוי מקומי
 function saveScores() {
-  localStorage.setItem('family_summer_scores', JSON.stringify(state.scores));
-  db.collection('family_data').doc('scores').set({ scores: state.scores })
-    .catch(err => console.error("שגיאה בשמירת ניקוד לענן:", err));
+  if (state.appMode === 'routine') {
+    localStorage.setItem('family_routine_scores', JSON.stringify(state.routineScores));
+    db.collection('family_data').doc('routine_scores').set({ scores: state.routineScores })
+      .catch(err => console.error("שגיאה בשמירת ניקוד שגרה לענן:", err));
+  } else {
+    localStorage.setItem('family_summer_scores', JSON.stringify(state.summerScores));
+    db.collection('family_data').doc('scores').set({ scores: state.summerScores })
+      .catch(err => console.error("שגיאה בשמירת ניקוד קיץ לענן:", err));
+  }
 }
 
 function saveEvents() {
-  localStorage.setItem('family_summer_events', JSON.stringify(state.events));
-  db.collection('family_data').doc('events').set({ events: state.events })
-    .catch(err => console.error("שגיאה בשמירת אירועים לענן:", err));
+  if (state.appMode === 'routine') {
+    localStorage.setItem('family_routine_events', JSON.stringify(state.routineEvents));
+    db.collection('family_data').doc('routine_events').set({ events: state.routineEvents })
+      .catch(err => console.error("שגיאה בשמירת אירועי שגרה לענן:", err));
+  } else {
+    localStorage.setItem('family_summer_events', JSON.stringify(state.summerEvents));
+    db.collection('family_data').doc('events').set({ events: state.summerEvents })
+      .catch(err => console.error("שגיאה בשמירת אירועי קיץ לענן:", err));
+  }
 }
 
 function saveShopping() {
-  localStorage.setItem('family_school_shopping', JSON.stringify(state.shopping));
-  db.collection('family_data').doc('school_shopping').set({ shopping: state.shopping })
-    .catch(err => console.error("שגיאה בשמירת קניות לענן:", err));
+  if (state.appMode === 'routine') {
+    localStorage.setItem('family_routine_shopping', JSON.stringify(state.routineShopping));
+    db.collection('family_data').doc('routine_shopping').set({ shopping: state.routineShopping })
+      .catch(err => console.error("שגיאה בשמירת קניות שגרה לענן:", err));
+  } else {
+    localStorage.setItem('family_school_shopping', JSON.stringify(state.summerShopping));
+    db.collection('family_data').doc('school_shopping').set({ shopping: state.summerShopping })
+      .catch(err => console.error("שגיאה בשמירת קניות קיץ לענן:", err));
+  }
+}
+
+function saveWallets() {
+  localStorage.setItem('family_wallets', JSON.stringify(state.wallets));
+  db.collection('family_data').doc('wallets').set({ wallets: state.wallets })
+    .catch(err => console.error("שגיאה בשמירת ארנקים לענן:", err));
 }
 
 // פונקציית עזר למיזוג בטוח של ניקוד מקומי וניקוד בענן
@@ -228,68 +327,84 @@ function mergeScores(local, remote) {
 
 // הגדרת סנכרון Firebase בזמן אמת מול הענן
 function setupFirebaseSync() {
-  // 1. מאזין לניקוד ומשימות
+  // 1. מאזין לניקוד קיץ
   db.collection('family_data').doc('scores').onSnapshot((doc) => {
     if (doc.exists) {
-      const data = doc.data();
-      const remoteScores = data.scores || {};
-      
-      // מיזוג נתונים מקומיים עם נתוני הענן
-      const mergedScores = mergeScores(state.scores, remoteScores);
-      
-      // בדיקה האם יש הבדל בין המיזוג לנתוני הענן. אם כן, נעדכן את הענן
-      if (JSON.stringify(mergedScores) !== JSON.stringify(remoteScores)) {
-        db.collection('family_data').doc('scores').set({ scores: mergedScores })
-          .catch(err => console.error("שגיאה בשמירת ניקוד מעודכן לענן:", err));
-      }
-      
-      // עדכון ה-state וה-localStorage בנתונים הממוזגים
-      state.scores = mergedScores;
-      localStorage.setItem('family_summer_scores', JSON.stringify(mergedScores));
+      const remoteScores = doc.data().scores || {};
+      const merged = mergeScores(state.summerScores, remoteScores);
+      state.summerScores = merged;
+      localStorage.setItem('family_summer_scores', JSON.stringify(merged));
       renderAll();
-    } else {
-      // אם אין מסמך בענן בכלל, נשמור את הניקוק המקומי הקיים לענן
-      saveScores();
-    }
-  }, (error) => {
-    console.error("שגיאה בסנכרון ניקוד:", error);
-  });
+    } else { saveScores(); }
+  }, err => console.error("שגיאה בסנכרון ניקוד קיץ:", err));
 
-  // 2. מאזין לפעילויות ואירועים
+  // 2. מאזין לניקוד שגרה
+  db.collection('family_data').doc('routine_scores').onSnapshot((doc) => {
+    if (doc.exists) {
+      const remoteScores = doc.data().scores || {};
+      const merged = mergeScores(state.routineScores, remoteScores);
+      state.routineScores = merged;
+      localStorage.setItem('family_routine_scores', JSON.stringify(merged));
+      renderAll();
+    } else { saveScores(); }
+  }, err => console.error("שגיאה בסנכרון ניקוד שגרה:", err));
+
+  // 3. מאזין לאירועי קיץ
   db.collection('family_data').doc('events').onSnapshot((doc) => {
     if (doc.exists) {
-      const data = doc.data();
-      state.events = data.events || [];
+      state.summerEvents = doc.data().events || [];
       renderAll();
-    } else {
-      // אם אין מסמך בענן, נשמור את האירועים המקומיים לענן
-      saveEvents();
-    }
-  }, (error) => {
-    console.error("שגיאה בסנכרון אירועים:", error);
-  });
+    } else { saveEvents(); }
+  }, err => console.error("שגיאה בסנכרון אירועי קיץ:", err));
 
-  // 3. מאזין לרשימת קניות לשנה הבאה
+  // 4. מאזין לאירועי שגרה
+  db.collection('family_data').doc('routine_events').onSnapshot((doc) => {
+    if (doc.exists) {
+      const remoteEvents = doc.data().events || [];
+      const hasObsoleteOrMissing = remoteEvents.some(e => e.id === 'routine_dentist_1' || e.id.startsWith('routine_course_')) || !remoteEvents.some(e => e.id.startsWith('routine_ceramics_'));
+      if (hasObsoleteOrMissing) {
+        state.routineEvents = INITIAL_ROUTINE_EVENTS;
+        saveEvents();
+      } else {
+        state.routineEvents = remoteEvents;
+      }
+      renderAll();
+    } else { saveEvents(); }
+  }, err => console.error("שגיאה בסנכרון אירועי שגרה:", err));
+
+  // 5. מאזין לקניות קיץ
   db.collection('family_data').doc('school_shopping').onSnapshot((doc) => {
     if (doc.exists) {
-      const data = doc.data();
-      state.shopping = (data.shopping || []).map(item => {
+      state.summerShopping = (doc.data().shopping || []).map(item => {
         const qty = parseInt(item.quantity) || 1;
-        if (item.boughtQty === undefined) {
-          item.boughtQty = item.bought ? qty : 0;
-        }
+        if (item.boughtQty === undefined) item.boughtQty = item.bought ? qty : 0;
         item.bought = item.boughtQty >= qty;
         return item;
       });
       renderAll();
-    } else {
-      // אם אין מסמך בענן, נשמור את הקניות המקומיות לענן
-      saveShopping();
-    }
-  }, (error) => {
-    console.error("שגיאה בסנכרון קניות:", error);
-  });
+    } else { saveShopping(); }
+  }, err => console.error("שגיאה בסנכרון קניות קיץ:", err));
 
+  // 6. מאזין לקניות שגרה
+  db.collection('family_data').doc('routine_shopping').onSnapshot((doc) => {
+    if (doc.exists) {
+      state.routineShopping = (doc.data().shopping || []).map(item => {
+        const qty = parseInt(item.quantity) || 1;
+        if (item.boughtQty === undefined) item.boughtQty = item.bought ? qty : 0;
+        item.bought = item.boughtQty >= qty;
+        return item;
+      });
+      renderAll();
+    } else { saveShopping(); }
+  }, err => console.error("שגיאה בסנכרון קניות שגרה:", err));
+
+  // 7. מאזין לארנק אישי
+  db.collection('family_data').doc('wallets').onSnapshot((doc) => {
+    if (doc.exists) {
+      state.wallets = doc.data().wallets || {};
+      renderAll();
+    } else { saveWallets(); }
+  }, err => console.error("שגיאה בסנכרון ארנקים:", err));
 }
 
 // עוזרי תאריכים
@@ -308,7 +423,6 @@ function getHebrewDateString(date) {
       month: 'long',
       year: 'numeric'
     });
-    // מנקה תווים בלתי נראים ומתקן את תצוגת הגרשיים
     return formatter.format(date).replace(/[\u200e\u200f]/g, '');
   } catch (e) {
     return '';
@@ -336,8 +450,42 @@ function updateDateDisplay() {
   }
 }
 
+// מעבר בין מצבי עבודה (קיץ vs שגרה)
+window.switchAppMode = function(mode) {
+  state.appMode = mode;
+  localStorage.setItem('family_app_mode', mode);
+
+  const summerBtn = document.getElementById('modeSummerBtn');
+  const routineBtn = document.getElementById('modeRoutineBtn');
+  if (summerBtn && routineBtn) {
+    summerBtn.classList.toggle('active', mode === 'summer');
+    routineBtn.classList.toggle('active', mode === 'routine');
+  }
+
+  const titleEl = document.getElementById('appHeaderTitle');
+  const subtitleEl = document.getElementById('appHeaderSubtitle');
+  if (titleEl && subtitleEl) {
+    if (mode === 'summer') {
+      titleEl.textContent = 'הקיץ של משפחת אליאב ☀️';
+      subtitleEl.textContent = 'אפליקציית משימות ולוז קיץ להורים עמית ותפארת, והילדים הילה, מוריה, אריאל, שירה וטליה';
+    } else {
+      titleEl.textContent = 'שגרת הלימודים של משפחת אליאב 🏫';
+      subtitleEl.textContent = 'אפליקציית משימות שגרה, חוגים וציוד לשנת הלימודים להורים עמית ותפארת והילדים';
+    }
+  }
+
+  renderAll();
+  showToast(mode === 'summer' ? 'עברתם למצב חופש גדול ☀️' : 'עברתם למצב זמני שגרה 🏫', 'info');
+};
+
 // מאזיני אירועים
 function setupEventListeners() {
+  // בורר מצבי אפליקציה (קיץ / שגרה)
+  const modeSummerBtn = document.getElementById('modeSummerBtn');
+  const modeRoutineBtn = document.getElementById('modeRoutineBtn');
+  if (modeSummerBtn) modeSummerBtn.addEventListener('click', () => switchAppMode('summer'));
+  if (modeRoutineBtn) modeRoutineBtn.addEventListener('click', () => switchAppMode('routine'));
+
   // ניווט טאבים
   document.querySelectorAll('.nav-tab').forEach(tab => {
     tab.addEventListener('click', (e) => {
@@ -358,6 +506,12 @@ function setupEventListeners() {
   const customPointsForm = document.getElementById('customPointsForm');
   if (customPointsForm) {
     customPointsForm.addEventListener('submit', handleCustomPointsSubmit);
+  }
+
+  // טופס ארנק אישי (מתן מזומן)
+  const walletPayoutForm = document.getElementById('walletPayoutForm');
+  if (walletPayoutForm) {
+    walletPayoutForm.addEventListener('submit', handleWalletPayoutSubmit);
   }
 
   // הוספת קנייה
@@ -440,25 +594,28 @@ function changeDate(days) {
   renderScoreboard();
 }
 
-// חישוב ניקוד מצטבר לילד
+// חישוב ניקוד מצטבר לילד במצב הנוכחי
 function calculateCumulativePoints(childId) {
   let total = 0;
-  for (const dateKey in state.scores) {
-    const dayScores = state.scores[dateKey][childId];
+  const scoresObj = getActiveScores();
+  for (const dateKey in scoresObj) {
+    const dayScores = scoresObj[dateKey][childId];
     if (dayScores) {
-      // משימות חיוביות
       if (dayScores.tasks) {
         for (const taskId in dayScores.tasks) {
           if (dayScores.tasks[taskId]) {
-            // מצא את הניקוד של המשימה מתוך data.js
             let task = DEFAULT_TASKS.daily.find(t => t.id === taskId) ||
                        DEFAULT_TASKS.bonus.find(t => t.id === taskId) ||
-                       DEFAULT_TASKS.negative.find(t => t.id === taskId);
+                       DEFAULT_TASKS.negative.find(t => t.id === taskId) ||
+                       (typeof DEFAULT_ROUTINE_TASKS !== 'undefined' && (
+                         DEFAULT_ROUTINE_TASKS.daily.find(t => t.id === taskId) ||
+                         DEFAULT_ROUTINE_TASKS.bonus.find(t => t.id === taskId) ||
+                         DEFAULT_ROUTINE_TASKS.negative.find(t => t.id === taskId)
+                       ));
             if (task) total += task.points;
           }
         }
       }
-      // נקודות ידניות
       if (dayScores.custom) {
         dayScores.custom.forEach(item => {
           total += item.points;
@@ -469,23 +626,27 @@ function calculateCumulativePoints(childId) {
   return total;
 }
 
-// חישוב ניקוד יומי לילד בתאריך ספציפי
+// חישוב ניקוד יומי לילד בתאריך ספציפי במצב הנוכחי
 function calculateDayPoints(childId, dateKey) {
   let total = 0;
-  const dayScores = state.scores[dateKey] && state.scores[dateKey][childId];
+  const scoresObj = getActiveScores();
+  const dayScores = scoresObj[dateKey] && scoresObj[dateKey][childId];
   if (dayScores) {
-    // משימות
     if (dayScores.tasks) {
       for (const taskId in dayScores.tasks) {
         if (dayScores.tasks[taskId]) {
           let task = DEFAULT_TASKS.daily.find(t => t.id === taskId) ||
                      DEFAULT_TASKS.bonus.find(t => t.id === taskId) ||
-                     DEFAULT_TASKS.negative.find(t => t.id === taskId);
+                     DEFAULT_TASKS.negative.find(t => t.id === taskId) ||
+                     (typeof DEFAULT_ROUTINE_TASKS !== 'undefined' && (
+                       DEFAULT_ROUTINE_TASKS.daily.find(t => t.id === taskId) ||
+                       DEFAULT_ROUTINE_TASKS.bonus.find(t => t.id === taskId) ||
+                       DEFAULT_ROUTINE_TASKS.negative.find(t => t.id === taskId)
+                     ));
           if (task) total += task.points;
         }
       }
     }
-    // נקודות ידניות
     if (dayScores.custom) {
       dayScores.custom.forEach(item => {
         total += item.points;
@@ -495,7 +656,7 @@ function calculateDayPoints(childId, dateKey) {
   return total;
 }
 
-// חישוב ניקוד משפחתי כולל
+// חישוב ניקוד משפחתי כולל במצב הנוכחי
 function getFamilyTotals() {
   let totalPoints = 0;
   state.children.forEach(child => {
@@ -517,11 +678,32 @@ function renderAll() {
   }
 }
 
-// בר עדכון סיכום משפחתי
+// בר עדכון סיכום משפחתי + יציאה משפחתית (כל 5,000 נק')
 function renderFamilySummaryBar() {
   const { totalPoints } = getFamilyTotals();
   const familyPointsEl = document.getElementById('familyTotalPoints');
   if (familyPointsEl) familyPointsEl.textContent = totalPoints.toLocaleString() + ' נק\'';
+
+  const outingsEarned = Math.floor(totalPoints / 5000);
+  const pointsInCurrentLevel = totalPoints % 5000;
+  const pointsNeededNext = 5000 - pointsInCurrentLevel;
+  const progressPercent = Math.min(100, Math.round((pointsInCurrentLevel / 5000) * 100));
+
+  const outingsCountEl = document.getElementById('familyOutingsCount');
+  const outingFillEl = document.getElementById('familyOutingFill');
+  const outingSubtextEl = document.getElementById('familyOutingSubtext');
+
+  if (outingsCountEl) {
+    outingsCountEl.textContent = outingsEarned > 0 ? `${outingsEarned} יציאות!` : '0 יציאות';
+  }
+  if (outingFillEl) {
+    outingFillEl.style.width = `${progressPercent}%`;
+  }
+  if (outingSubtextEl) {
+    outingSubtextEl.textContent = (pointsNeededNext === 5000 && outingsEarned > 0)
+      ? '🏆 כל הכבוד! הגעתם ליעד! היעד הבא מתחיל עכשיו!'
+      : `עוד ${pointsNeededNext.toLocaleString()} נק' ליציאה הבאה`;
+  }
 }
 
 // עוזרי בדיקת משתמשים והרשאות
@@ -562,25 +744,27 @@ function updateUserProfileStatusBar() {
 }
 
 window.selectProfile = function(userId) {
-  if (userId.startsWith('parent_')) {
-    state.tempSelectedUserId = userId;
-    state.currentPIN = '';
-    updatePinDots();
-    const pinModal = document.getElementById('pinCodeModal');
-    if (pinModal) pinModal.classList.add('active');
-  } else {
-    // התחברות כילד
-    state.currentUser = userId;
-    state.activeChildId = userId;
-    localStorage.setItem('family_summer_active_user', userId);
-    
-    const portal = document.getElementById('profileSelectionPortal');
-    if (portal) portal.classList.remove('active');
-    
-    renderAll();
-    
-    const child = state.children.find(c => c.id === userId);
-    showToast(`שלום ${child ? child.name : ''}! 👋`, 'success');
+  try {
+    if (userId.startsWith('parent_')) {
+      state.tempSelectedUserId = userId;
+      state.currentPIN = '';
+      updatePinDots();
+      const pinModal = document.getElementById('pinCodeModal');
+      if (pinModal) pinModal.classList.add('active');
+    } else {
+      state.currentUser = userId;
+      state.activeChildId = userId;
+      localStorage.setItem('family_summer_active_user', userId);
+      
+      hidePortal();
+      renderAll();
+      
+      const child = state.children.find(c => c.id === userId);
+      showToast(`שלום ${child ? child.name : ''}! 👋`, 'success');
+    }
+  } catch (err) {
+    console.error('Error selecting profile:', err);
+    showToast(`שגיאה בבחירת פרופיל: ${err.message}`, 'error');
   }
 };
 
@@ -604,10 +788,9 @@ window.pressNum = function(num) {
         const pinModal = document.getElementById('pinCodeModal');
         if (pinModal) pinModal.classList.remove('active');
         
-        const portal = document.getElementById('profileSelectionPortal');
-        if (portal) portal.classList.remove('active');
+        hidePortal();
         
-        state.activeChildId = 'hila'; // ברירת מחדל
+        state.activeChildId = 'hila';
         renderAll();
         
         const parentName = state.currentUser === 'parent_amit' ? 'אבא עמית' : 'אמא תפארת';
@@ -643,8 +826,7 @@ window.logout = function() {
   state.currentUser = null;
   localStorage.removeItem('family_summer_active_user');
   
-  const portal = document.getElementById('profileSelectionPortal');
-  if (portal) portal.classList.add('active');
+  showPortal();
   
   state.currentPIN = '';
   state.tempSelectedUserId = null;
@@ -659,7 +841,6 @@ function renderScoreboard() {
   const childrenContainer = document.getElementById('childrenSelectorList');
   if (!childrenContainer) return;
 
-  // 1. רנדור רשימת הילדים (צד ימין / למעלה במובייל)
   const hrEl = childrenContainer.previousElementSibling;
   const h3El = hrEl ? hrEl.previousElementSibling : null;
   if (isParent()) {
@@ -678,7 +859,7 @@ function renderScoreboard() {
     const btn = document.createElement('button');
     btn.className = `child-btn ${state.activeChildId === child.id ? 'active' : ''}`;
     btn.style.setProperty('--child-color', child.color);
-    btn.style.setProperty('--child-bg-light', child.color + '18'); // שקיפות של 10%
+    btn.style.setProperty('--child-bg-light', child.color + '18');
     btn.innerHTML = `
       <div class="child-avatar">${child.icon}</div>
       <div class="child-meta">
@@ -694,7 +875,6 @@ function renderScoreboard() {
     childrenContainer.appendChild(btn);
   });
 
-  // 2. עדכון כרטיס המידע של הילד הנבחר
   const activeChild = state.children.find(c => c.id === state.activeChildId);
   if (!activeChild) return;
 
@@ -703,7 +883,6 @@ function renderScoreboard() {
   pane.style.setProperty('--child-color', childColor);
   pane.style.setProperty('--child-bg-light', childColor + '18');
 
-  // כותרת והישגים לילד
   const childCumulativePoints = calculateCumulativePoints(activeChild.id);
   const childDayPoints = calculateDayPoints(activeChild.id, dateKey);
   
@@ -713,29 +892,35 @@ function renderScoreboard() {
   const dayPointsEl = document.getElementById('selectedChildDayPoints');
   
   if (avatarEl) avatarEl.textContent = activeChild.icon;
-  if (nameEl) nameEl.textContent = `הישגים לקיץ - ${activeChild.name}`;
+  if (nameEl) nameEl.textContent = `הישגים ${state.appMode === 'summer' ? 'לקיץ' : 'בשגרה'} - ${activeChild.name}`;
   if (pointsEl) pointsEl.textContent = `${childCumulativePoints} נקודות (סה"כ)`;
   if (dayPointsEl) dayPointsEl.textContent = `${childDayPoints} נקודות ביום זה`;
 
+  // רנדור ארנק אישי
+  renderChildWallet(activeChild);
+
   // 3. רנדור רשימת משימות ליום זה
-  if (!state.scores[dateKey]) {
-    state.scores[dateKey] = {};
+  const scoresObj = getActiveScores();
+  if (!scoresObj[dateKey]) {
+    scoresObj[dateKey] = {};
   }
-  if (!state.scores[dateKey][activeChild.id]) {
-    state.scores[dateKey][activeChild.id] = { tasks: {}, custom: [] };
+  if (!scoresObj[dateKey][activeChild.id]) {
+    scoresObj[dateKey][activeChild.id] = { tasks: {}, custom: [] };
   }
 
-  const childDayData = state.scores[dateKey][activeChild.id];
+  const childDayData = scoresObj[dateKey][activeChild.id];
   if (childDayData) {
     if (!childDayData.tasks) childDayData.tasks = {};
     if (!childDayData.custom) childDayData.custom = [];
   }
 
+  const currentTasksData = getActiveTasks();
+
   // רנדור משימות יומיות
   const dailyTasksList = document.getElementById('dailyTasksList');
   if (dailyTasksList) {
     dailyTasksList.innerHTML = '';
-    DEFAULT_TASKS.daily.forEach(task => {
+    currentTasksData.daily.forEach(task => {
       const isCompleted = !!childDayData.tasks[task.id];
       const card = document.createElement('div');
       card.className = `task-item-card ${isCompleted ? 'completed' : ''}`;
@@ -757,7 +942,7 @@ function renderScoreboard() {
   const bonusTasksList = document.getElementById('bonusTasksList');
   if (bonusTasksList) {
     bonusTasksList.innerHTML = '';
-    DEFAULT_TASKS.bonus.forEach(task => {
+    currentTasksData.bonus.forEach(task => {
       const isCompleted = !!childDayData.tasks[task.id];
       const card = document.createElement('div');
       card.className = `task-item-card ${isCompleted ? 'completed' : ''}`;
@@ -779,7 +964,7 @@ function renderScoreboard() {
   const negativeTasksList = document.getElementById('negativeTasksList');
   if (negativeTasksList) {
     negativeTasksList.innerHTML = '';
-    DEFAULT_TASKS.negative.forEach(task => {
+    currentTasksData.negative.forEach(task => {
       const isCompleted = !!childDayData.tasks[task.id];
       const card = document.createElement('div');
       card.className = `task-item-card negative ${isCompleted ? 'completed negative' : ''}`;
@@ -825,29 +1010,134 @@ function renderScoreboard() {
     customActionsHistory.innerHTML = '<div style="font-size:0.85rem; color:var(--text-muted); text-align:center; padding:5px 0;">אין תוספות/הפחתות מיוחדות להיום</div>';
   }
 
-  // הסתרת טופס הוספת נקודות של הורה לילדים
   const customPointsCard = document.querySelector('.custom-points-card');
   if (customPointsCard) {
     customPointsCard.style.display = isParent() ? 'block' : 'none';
   }
 
-  // עדכון סך הכל המשפחתי בבר העליון
   renderFamilySummaryBar();
 }
 
+// רנדור ארנק אישי לילד/ה
+function renderChildWallet(activeChild) {
+  const walletCard = document.getElementById('childWalletCard');
+  if (!walletCard) return;
+
+  const childId = activeChild.id;
+  const totalPoints = calculateCumulativePoints(childId);
+  const earnedMoney = totalPoints * 0.05; // 100 points = 5 NIS => 1 point = 0.05 NIS
+  
+  const childWallets = state.wallets[childId] || [];
+  let givenMoney = 0;
+  childWallets.forEach(item => {
+    givenMoney += (parseFloat(item.amount) || 0);
+  });
+  
+  const balance = earnedMoney - givenMoney;
+
+  const childNameEl = document.getElementById('walletChildName');
+  const totalPointsEl = document.getElementById('walletTotalPoints');
+  const totalMoneyEl = document.getElementById('walletTotalMoney');
+  const givenMoneyEl = document.getElementById('walletGivenMoney');
+  const balanceMoneyEl = document.getElementById('walletBalanceMoney');
+
+  if (childNameEl) childNameEl.textContent = activeChild.name;
+  if (totalPointsEl) totalPointsEl.textContent = `${totalPoints.toLocaleString()} נק'`;
+  if (totalMoneyEl) totalMoneyEl.textContent = `${earnedMoney.toFixed(1)} ₪`;
+  if (givenMoneyEl) givenMoneyEl.textContent = `${givenMoney.toFixed(1)} ₪`;
+  if (balanceMoneyEl) balanceMoneyEl.textContent = `${balance.toFixed(1)} ₪`;
+
+  const parentActionsEl = document.getElementById('walletParentActions');
+  if (parentActionsEl) {
+    parentActionsEl.style.display = isParent() ? 'block' : 'none';
+  }
+
+  const historyEl = document.getElementById('walletHistory');
+  if (historyEl) {
+    historyEl.innerHTML = '';
+    if (childWallets.length > 0) {
+      childWallets.forEach(item => {
+        const row = document.createElement('div');
+        row.className = `history-item wallet-history-item ${item.amount < 0 ? 'negative' : ''}`;
+        row.style.setProperty('--child-color', activeChild.color);
+        row.innerHTML = `
+          <div>
+            ${isParent() ? `<button class="btn-delete-history" title="מחק" onclick="deleteWalletPayout('${childId}', '${item.id}')">🗑️</button>` : ''}
+            <span class="history-text">💵 ${item.reason} (${item.date || ''})</span>
+          </div>
+          <span class="history-value ${item.amount > 0 ? 'minus' : 'plus'}">${item.amount > 0 ? '-' : '+'}${Math.abs(item.amount)} ₪</span>
+        `;
+        historyEl.appendChild(row);
+      });
+    } else {
+      historyEl.innerHTML = '<div style="font-size:0.85rem; color:var(--text-muted); text-align:center; padding:5px 0;">אין היסטוריית מתן מזומן</div>';
+    }
+  }
+}
+
+// מתן מזומן / עדכון ארנק
+function handleWalletPayoutSubmit(e) {
+  e.preventDefault();
+  const reasonInput = document.getElementById('walletReason');
+  const amountInput = document.getElementById('walletAmount');
+  
+  if (!reasonInput || !amountInput) return;
+  
+  const reason = reasonInput.value.trim();
+  const amount = parseFloat(amountInput.value);
+  const childId = state.activeChildId;
+
+  if (!reason || isNaN(amount)) {
+    showToast('נא להזין סיבה וסכום תקינים', 'error');
+    return;
+  }
+
+  if (!state.wallets[childId]) state.wallets[childId] = [];
+
+  const newItem = {
+    id: 'wallet_' + Date.now(),
+    date: formatDateKey(new Date()),
+    reason,
+    amount
+  };
+
+  state.wallets[childId].push(newItem);
+  saveWallets();
+  
+  reasonInput.value = '';
+  amountInput.value = '';
+
+  renderScoreboard();
+  const child = state.children.find(c => c.id === childId);
+  showToast(`עודכן ארנק ל${child ? child.name : ''}: ${reason} (${amount} ₪)`, 'success');
+}
+
+window.deleteWalletPayout = function(childId, itemId) {
+  if (state.wallets[childId]) {
+    state.wallets[childId] = state.wallets[childId].filter(i => i.id !== itemId);
+    saveWallets();
+    renderScoreboard();
+    showToast('הרישום נמחק מהארנק', 'info');
+  }
+};
+
 // toggle משימה
 function toggleTask(dateKey, childId, taskId) {
-  if (!state.scores[dateKey]) state.scores[dateKey] = {};
-  if (!state.scores[dateKey][childId]) state.scores[dateKey][childId] = { tasks: {}, custom: [] };
+  const scoresObj = getActiveScores();
+  if (!scoresObj[dateKey]) scoresObj[dateKey] = {};
+  if (!scoresObj[dateKey][childId]) scoresObj[dateKey][childId] = { tasks: {}, custom: [] };
   
-  const currentStatus = !!state.scores[dateKey][childId].tasks[taskId];
-  state.scores[dateKey][childId].tasks[taskId] = !currentStatus;
+  const currentStatus = !!scoresObj[dateKey][childId].tasks[taskId];
+  scoresObj[dateKey][childId].tasks[taskId] = !currentStatus;
   
   saveScores();
   renderScoreboard();
   
-  // הודעה
-  let task = DEFAULT_TASKS.daily.find(t => t.id === taskId) ||
+  const tasksData = getActiveTasks();
+  let task = tasksData.daily.find(t => t.id === taskId) ||
+             tasksData.bonus.find(t => t.id === taskId) ||
+             tasksData.negative.find(t => t.id === taskId) ||
+             DEFAULT_TASKS.daily.find(t => t.id === taskId) ||
              DEFAULT_TASKS.bonus.find(t => t.id === taskId) ||
              DEFAULT_TASKS.negative.find(t => t.id === taskId);
   const child = state.children.find(c => c.id === childId);
@@ -879,8 +1169,9 @@ function handleCustomPointsSubmit(e) {
     return;
   }
 
-  if (!state.scores[dateKey]) state.scores[dateKey] = {};
-  if (!state.scores[dateKey][childId]) state.scores[dateKey][childId] = { tasks: {}, custom: [] };
+  const scoresObj = getActiveScores();
+  if (!scoresObj[dateKey]) scoresObj[dateKey] = {};
+  if (!scoresObj[dateKey][childId]) scoresObj[dateKey][childId] = { tasks: {}, custom: [] };
 
   const newItem = {
     id: 'custom_' + Date.now(),
@@ -888,22 +1179,22 @@ function handleCustomPointsSubmit(e) {
     points: amount
   };
 
-  state.scores[dateKey][childId].custom.push(newItem);
+  scoresObj[dateKey][childId].custom.push(newItem);
   saveScores();
   
-  // איפוס טופס
   reasonInput.value = '';
   amountInput.value = '';
 
   renderScoreboard();
   const child = state.children.find(c => c.id === childId);
-  showToast(`נוסף רישום מיוחד ל${child.name}: ${reason} (${amount > 0 ? '+' : ''}${amount} נקודות)`, 'success');
+  showToast(`נוסף רישום מיוחד ל${child ? child.name : ''}: ${reason} (${amount > 0 ? '+' : ''}${amount} נקודות)`, 'success');
 }
 
 // מחיקת רישום ידני
 function deleteCustomPoints(dateKey, childId, itemId) {
-  if (state.scores[dateKey] && state.scores[dateKey][childId] && state.scores[dateKey][childId].custom) {
-    state.scores[dateKey][childId].custom = state.scores[dateKey][childId].custom.filter(item => item.id !== itemId);
+  const scoresObj = getActiveScores();
+  if (scoresObj[dateKey] && scoresObj[dateKey][childId] && scoresObj[dateKey][childId].custom) {
+    scoresObj[dateKey][childId].custom = scoresObj[dateKey][childId].custom.filter(item => item.id !== itemId);
     saveScores();
     renderScoreboard();
     showToast('הרישום נמחק בהצלחה', 'info');
@@ -931,17 +1222,16 @@ function renderActivities() {
   const dateTypeFilter = document.getElementById('filterDateType').value;
   const specificDateVal = document.getElementById('filterSpecificDate').value;
 
+  const activeEventsList = getActiveEvents();
+
   // סינון הפעילויות מהמדינה
-  const filteredEvents = state.events.filter(event => {
-    // 1. סינון לפי ילד
+  const filteredEvents = activeEventsList.filter(event => {
     if (childFilter !== 'all') {
       if (!event.children.includes(childFilter)) return false;
     }
 
-    // 2. סינון לפי קטגוריה
     if (categoryFilter !== 'all' && event.category !== categoryFilter) return false;
 
-    // 3. סינון לפי חיפוש חופשי (כותרת, ציוד או הערות)
     if (searchQuery) {
       const matchTitle = event.title.toLowerCase().includes(searchQuery);
       const matchRequired = event.required && event.required.toLowerCase().includes(searchQuery);
@@ -949,7 +1239,6 @@ function renderActivities() {
       if (!matchTitle && !matchRequired && !matchNotes) return false;
     }
 
-    // 4. סינון לפי תאריכים
     if (dateTypeFilter !== 'all') {
       const todayStr = formatDateKey(new Date());
       const eventDateStr = event.date;
@@ -987,19 +1276,16 @@ function renderActivities() {
     return true;
   });
 
-  // מיון לפי תאריך ושעה
   filteredEvents.sort((a, b) => {
     if (a.date !== b.date) return new Date(a.date) - new Date(b.date);
     return a.time.localeCompare(b.time);
   });
 
-  // עדכון מונה אירועים
   const countEl = document.getElementById('activityCount');
   if (countEl) {
     countEl.textContent = `נמצאו ${filteredEvents.length} פעילויות`;
   }
 
-  // רנדור
   eventsContainer.innerHTML = '';
   if (filteredEvents.length === 0) {
     eventsContainer.innerHTML = `
@@ -1016,18 +1302,15 @@ function renderActivities() {
     const card = document.createElement('div');
     card.className = 'event-card';
     
-    // קביעת כותרת קטגוריה בעברית
     let categoryName = 'פעילות';
     if (event.category === 'course') categoryName = 'קורס/חוג';
     if (event.category === 'medical') categoryName = 'תור רפואי';
 
-    // המרת התאריך לעברית ולועזית יפה
     const eventDate = new Date(event.date);
     const hebDateStr = getHebrewDateString(eventDate);
     const gregDateStr = new Intl.DateTimeFormat('he-IL', { day: 'numeric', month: 'numeric', year: 'numeric' }).format(eventDate);
     const dayOfWeek = new Intl.DateTimeFormat('he-IL', { weekday: 'long' }).format(eventDate);
 
-    // תגיות ילדים משתתפים
     let childrenBadgesHTML = '';
     event.children.forEach(childId => {
       const child = state.children.find(c => c.id === childId);
@@ -1080,7 +1363,9 @@ function renderActivities() {
 // מחיקת אירוע
 window.deleteEvent = function(eventId) {
   if (confirm('האם אתם בטוחים שברצונכם למחוק את הפעילות הזו?')) {
-    state.events = state.events.filter(e => e.id !== eventId);
+    const events = getActiveEvents();
+    const updated = events.filter(e => e.id !== eventId);
+    setActiveEvents(updated);
     saveEvents();
     renderActivities();
     showToast('הפעילות נמחקה בהצלחה', 'info');
@@ -1098,7 +1383,6 @@ function handleAddActivitySubmit(e) {
   const required = document.getElementById('actRequired').value.trim();
   const notes = document.getElementById('actNotes').value.trim();
 
-  // קריאת הילדים שנבחרו בתיבות הסימון
   const selectedChildren = [];
   state.children.forEach(child => {
     const cb = document.getElementById(`act_child_${child.id}`);
@@ -1123,14 +1407,12 @@ function handleAddActivitySubmit(e) {
     children: selectedChildren
   };
 
-  state.events.push(newEvent);
+  const events = getActiveEvents();
+  events.push(newEvent);
   saveEvents();
   
-  // איפוס הטופס וסגירת המודאל
   e.target.reset();
-  // סגירת מודאל
   document.getElementById('activityModal').classList.remove('active');
-  // איפוס עיצוב כפתורי הילדים בטופס
   document.querySelectorAll('.checkbox-btn-label').forEach(lbl => lbl.classList.remove('checked'));
 
   renderActivities();
@@ -1147,7 +1429,6 @@ window.toggleFormChildCheckbox = function(labelElement, checkboxId) {
 };
 
 // --- אזור 3: רשימת קניות וציוד ---
-// פונקציית עזר לאיחוד רשימות קניות לשנה הבאה
 function getCombinedShoppingItems(items) {
   const combined = {};
   items.forEach(item => {
@@ -1203,17 +1484,11 @@ function renderShopping() {
   const shopContainer = document.getElementById('shoppingListContainer');
   if (!shopContainer) return;
 
-  // טופס ההוספה פתוח להורים ולילדים
   const sideFormCard = document.querySelector('.side-form-card');
-  if (sideFormCard) {
-    sideFormCard.style.display = 'block';
-  }
+  if (sideFormCard) sideFormCard.style.display = 'block';
   const shoppingLayout = document.querySelector('.shopping-layout');
-  if (shoppingLayout) {
-    shoppingLayout.style.gridTemplateColumns = '2fr 1fr';
-  }
+  if (shoppingLayout) shoppingLayout.style.gridTemplateColumns = '2fr 1fr';
   
-  // הגבלת אפשרויות לילדים בטופס הוספה
   const shopChildSelect = document.getElementById('shopChild');
   if (shopChildSelect) {
     if (isParent()) {
@@ -1232,10 +1507,11 @@ function renderShopping() {
   const childFilter = isParent() ? (filterShopChildEl ? filterShopChildEl.value : 'union') : state.currentUser;
   const statusFilter = document.getElementById('filterShopStatus').value;
 
+  const activeShoppingList = getActiveShopping();
   let displayItems = [];
 
   if (childFilter === 'union') {
-    const combinedItems = getCombinedShoppingItems(state.shopping);
+    const combinedItems = getCombinedShoppingItems(activeShoppingList);
     displayItems = combinedItems.filter(item => {
       if (statusFilter !== 'all') {
         const isBought = statusFilter === 'bought';
@@ -1244,7 +1520,7 @@ function renderShopping() {
       return true;
     });
   } else if (childFilter === 'all') {
-    displayItems = state.shopping.filter(item => {
+    displayItems = activeShoppingList.filter(item => {
       if (statusFilter !== 'all') {
         const isBought = statusFilter === 'bought';
         if (item.bought !== isBought) return false;
@@ -1252,7 +1528,7 @@ function renderShopping() {
       return true;
     });
   } else {
-    displayItems = state.shopping.filter(item => {
+    displayItems = activeShoppingList.filter(item => {
       if (item.child !== childFilter && item.child !== 'all') return false;
       if (statusFilter !== 'all') {
         const isBought = statusFilter === 'bought';
@@ -1262,7 +1538,6 @@ function renderShopping() {
     });
   }
 
-  // רנדור מד התקדמות לקניות לפי כמות הפריטים בפועל
   let totalCount = 0;
   let boughtCount = 0;
   displayItems.forEach(i => {
@@ -1282,7 +1557,6 @@ function renderShopping() {
     progressTextEl.textContent = `נקנו ${boughtCount} מתוך ${totalCount} פריטים (${totalCount > 0 ? Math.round((boughtCount / totalCount) * 100) : 0}%)`;
   }
 
-  // רנדור רשימה
   shopContainer.innerHTML = '';
   if (displayItems.length === 0) {
     shopContainer.innerHTML = `
@@ -1391,16 +1665,16 @@ function renderShopping() {
     
     shopContainer.appendChild(row);
   });
-
 }
 
 // התאמת כמות קנויה פריט פריט
 window.adjustBoughtQty = function(itemId, delta, constituentIdsStr, event) {
   if (event) event.stopPropagation();
+  const shoppingList = getActiveShopping();
   
   if (constituentIdsStr) {
     const ids = constituentIdsStr.split(',');
-    const items = state.shopping.filter(i => ids.includes(i.id));
+    const items = shoppingList.filter(i => ids.includes(i.id));
     if (items.length > 0) {
       if (delta > 0) {
         const target = items.find(i => (parseInt(i.boughtQty) || 0) < (parseInt(i.quantity) || 1));
@@ -1427,7 +1701,7 @@ window.adjustBoughtQty = function(itemId, delta, constituentIdsStr, event) {
       showToast(`עודכן: ${title} (${totalBought}/${totalQty})`, 'info');
     }
   } else {
-    const item = state.shopping.find(i => i.id === itemId);
+    const item = shoppingList.find(i => i.id === itemId);
     if (item) {
       const qty = parseInt(item.quantity) || 1;
       let current = parseInt(item.boughtQty) || 0;
@@ -1446,9 +1720,10 @@ window.adjustBoughtQty = function(itemId, delta, constituentIdsStr, event) {
 
 // שינוי סטטוס קנייה
 window.toggleShopItem = function(itemId, constituentIdsStr) {
+  const shoppingList = getActiveShopping();
   if (constituentIdsStr) {
     const ids = constituentIdsStr.split(',');
-    const items = state.shopping.filter(i => ids.includes(i.id));
+    const items = shoppingList.filter(i => ids.includes(i.id));
     if (items.length > 0) {
       const allBought = items.every(i => (parseInt(i.boughtQty) || 0) >= (parseInt(i.quantity) || 1));
       items.forEach(i => {
@@ -1462,7 +1737,7 @@ window.toggleShopItem = function(itemId, constituentIdsStr) {
       showToast(!allBought ? `סומן כ"נקנה": ${title} (לכולם)` : `סומן כ"צריך לקנות": ${title} (לכולם)`, 'info');
     }
   } else {
-    const item = state.shopping.find(i => i.id === itemId);
+    const item = shoppingList.find(i => i.id === itemId);
     if (item) {
       const qty = parseInt(item.quantity) || 1;
       const fullyBought = (parseInt(item.boughtQty) || 0) >= qty;
@@ -1478,9 +1753,11 @@ window.toggleShopItem = function(itemId, constituentIdsStr) {
 
 // מחיקת פריט קנייה
 window.deleteShopItem = function(itemId) {
-  const item = state.shopping.find(i => i.id === itemId);
+  const shoppingList = getActiveShopping();
+  const item = shoppingList.find(i => i.id === itemId);
   if (item && confirm(`למחוק את "${item.title}" מרשימת הקניות?`)) {
-    state.shopping = state.shopping.filter(i => i.id !== itemId);
+    const updated = shoppingList.filter(i => i.id !== itemId);
+    setActiveShopping(updated);
     saveShopping();
     renderShopping();
     showToast('הפריט נמחק מרשימת הקניות', 'info');
@@ -1517,10 +1794,10 @@ function handleAddShopSubmit(e) {
     notes
   };
 
-  state.shopping.push(newItem);
+  const shoppingList = getActiveShopping();
+  shoppingList.push(newItem);
   saveShopping();
 
-  // איפוס
   titleInput.value = '';
   if (quantityInput) quantityInput.value = '1';
   notesInput.value = '';
@@ -1544,7 +1821,6 @@ function showToast(message, type = 'info') {
   toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
   container.appendChild(toast);
 
-  // מחיקה אוטומטית לאחר 3.5 שניות
   setTimeout(() => {
     toast.style.animation = 'fadeIn 0.3s ease-out reverse forwards';
     setTimeout(() => {

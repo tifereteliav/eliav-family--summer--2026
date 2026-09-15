@@ -52,6 +52,44 @@ const DEFAULT_TASKS = {
   ]
 };
 
+const DEFAULT_ROUTINE_TASKS = {
+  daily: [
+    { id: 'routine_wake_up', text: 'לקום בזמן ללימודים / גן', points: 1, icon: '⏰' },
+    { id: 'routine_wash_hands', text: 'ליטול ידיים של בוקר', points: 1, icon: '💧' },
+    { id: 'routine_brush_morning', text: 'לצחצוח שיניים בבוקר', points: 1, icon: '🪥' },
+    { id: 'routine_bag_pack', text: 'הכנת ילקוט ומערכת שעות', points: 2, icon: '🎒' },
+    { id: 'routine_homework', text: 'הכנת שיעורי בית בזמן', points: 3, icon: '📝' },
+    { id: 'routine_clear_lunch', text: 'פינוי ארוחת צהריים', points: 1, icon: '🍲' },
+    { id: 'routine_clear_dinner', text: 'פינוי ארוחת ערב', points: 1, icon: '🥣' },
+    { id: 'routine_shower', text: 'מקלחת בזמן', points: 1, icon: '🚿' },
+    { id: 'routine_bed_time', text: 'עלייה למיטה ושינה בזמן', points: 1, icon: '🛌' },
+    { id: 'routine_brush_night', text: 'לצחצוח שיניים לפני השינה', points: 1, icon: '🪥' }
+  ],
+  bonus: [
+    { id: 'routine_tidy_room', text: 'לסדר את החדר', points: 5, icon: '🧹' },
+    { id: 'routine_tidy_living_room', text: 'לסדר את הסלון', points: 5, icon: '🛋️' },
+    { id: 'routine_move_laundry_to_dryer', text: 'להעביר כביסה מהמכונה למייבש ולהפעיל את המייבש', points: 5, icon: '💨' },
+    { id: 'routine_hang_laundry', text: 'לתלות כביסה', points: 5, icon: '🧺' },
+    { id: 'routine_good_teacher_note', text: 'הערה טובה מהמורה', points: 5, icon: '🌟' },
+    { id: 'routine_healthy_food', text: 'אוכל בריא לבית הספר', points: 5, icon: '🥗' },
+    { id: 'routine_help_homework', text: 'עזרה לאחים בשיעורי בית', points: 5, icon: '📚' },
+    { id: 'routine_wash_dishes', text: 'לשטוף כלים', points: 5, icon: '🧽' },
+    { id: 'routine_fold_laundry', text: 'לקפל כביסה', points: 5, icon: '👕' },
+    { id: 'routine_shabbat_prep', text: 'עזרה מיוחדת בהכנות לשבת', points: 10, icon: '🕯️' },
+    { id: 'routine_babysit', text: 'לשמור על שירה וטליה', points: 5, icon: '👶' },
+    { id: 'routine_unload_dishwasher', text: 'לפנות את המדיח', points: 5, icon: '🍽️' },
+    { id: 'routine_throw_trash', text: 'לשפוך אשפה', points: 5, icon: '🗑️' }
+  ],
+  negative: [
+    { id: 'routine_bad_teacher_note', text: 'הערה לא טובה מבית הספר', points: -15, icon: '📝' },
+    { id: 'routine_no_homework', text: 'אי הכנת שיעורי בית', points: -15, icon: '❌' },
+    { id: 'routine_screaming', text: 'צעקות וויכוחים', points: -15, icon: '🗣️' },
+    { id: 'routine_fights', text: 'מריבות והצקות', points: -15, icon: '⚡' },
+    { id: 'routine_screens', text: 'חריגה מזמן מסכים מאושר', points: -15, icon: '📱' },
+    { id: 'routine_late_bed', text: 'איחור משמעותי לשינה', points: -10, icon: '⏰' }
+  ]
+};
+
 const INITIAL_EVENTS = [
   // הילה ומוריה - בריכה בקייטנה (6.7, 12.7, 16.7)
   {
@@ -251,3 +289,63 @@ const INITIAL_SHOPPING = [
   { id: 'shop_moriah_11', title: 'יומן שנתי עם תאריכים בגודל A5', child: 'moriah', quantity: 1, category: 'books', bought: false, notes: 'ההולם את דרכו החינוכית של בית הספר' },
   { id: 'shop_moriah_12', title: 'סידור תפילה', child: 'moriah', quantity: 1, category: 'books', bought: false, notes: 'הציוד הנדרש' }
 ];
+
+const INITIAL_ROUTINE_EVENTS = [
+  {
+    id: 'routine_ceramics_moriah',
+    title: 'חוג קרמיקה',
+    date: '2026-09-06',
+    time: '16:00 - 17:00',
+    category: 'course',
+    children: ['moriah'],
+    required: 'סינר / בגדים שניתן ללכלך',
+    notes: 'חוג שבועי קבוע בימי ראשון'
+  },
+  {
+    id: 'routine_afikim_hila',
+    title: 'תוכנית אפיקים',
+    date: '2026-09-02',
+    time: '08:00 - 13:00',
+    category: 'course',
+    children: ['hila'],
+    required: 'ילקוט, ציוד לימודים, אוכל ומים',
+    notes: 'תוכנית שבועית קבועה בימי רביעי'
+  },
+  {
+    id: 'routine_afikim_moriah',
+    title: 'תוכנית אפיקים',
+    date: '2026-09-07',
+    time: '08:00 - 13:00',
+    category: 'course',
+    children: ['moriah'],
+    required: 'ילקוט, ציוד לימודים, אוכל ומים',
+    notes: 'תוכנית שבועית קבועה בימי שני'
+  },
+  {
+    id: 'routine_barkai_ariel_tue',
+    title: 'נאמני ברקאי',
+    date: '2026-09-01',
+    time: '07:30 - 08:00',
+    category: 'course',
+    children: ['ariel'],
+    required: 'תג / ציוד נאמני ברקאי',
+    notes: 'פעילות קבועה בימי שלישי ושישי'
+  },
+  {
+    id: 'routine_barkai_ariel_fri',
+    title: 'נאמני ברקאי',
+    date: '2026-09-04',
+    time: '07:30 - 08:00',
+    category: 'course',
+    children: ['ariel'],
+    required: 'תג / ציוד נאמני ברקאי',
+    notes: 'פעילות קבועה בימי שלישי ושישי'
+  }
+];
+
+const INITIAL_ROUTINE_SHOPPING = [
+  { id: 'shop_routine_1', title: 'חליפת ג\'ודו לאריאל', child: 'ariel', quantity: 1, category: 'clothing', bought: false, notes: 'מידה מתאימה לתחילת השנה' },
+  { id: 'shop_routine_2', title: 'בלוק ציור איכותי להילה', child: 'hila', quantity: 2, category: 'equipment', bought: false, notes: 'לחוג אמנות' },
+  { id: 'shop_routine_3', title: 'נעלי ספורט חדשות למוריה', child: 'moriah', quantity: 1, category: 'clothing', bought: false, notes: 'לחוג התעמלות' }
+];
+
