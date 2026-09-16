@@ -466,8 +466,8 @@ window.switchAppMode = function(mode) {
   const subtitleEl = document.getElementById('appHeaderSubtitle');
   if (titleEl && subtitleEl) {
     if (mode === 'summer') {
-      titleEl.textContent = 'הקיץ של משפחת אליאב ☀️';
-      subtitleEl.textContent = 'אפליקציית משימות ולוז קיץ להורים עמית ותפארת, והילדים הילה, מוריה, אריאל, שירה וטליה';
+      titleEl.textContent = 'לו"ז חופש - משפחת אליאב 🏖️';
+      subtitleEl.textContent = 'אפליקציית משימות ולוז חופשות (חגים וקיץ) להורים עמית ותפארת, והילדים הילה, מוריה, אריאל, שירה וטליה';
     } else {
       titleEl.textContent = 'שגרת הלימודים של משפחת אליאב 🏫';
       subtitleEl.textContent = 'אפליקציית משימות שגרה, חוגים וציוד לשנת הלימודים להורים עמית ותפארת והילדים';
@@ -475,7 +475,7 @@ window.switchAppMode = function(mode) {
   }
 
   renderAll();
-  showToast(mode === 'summer' ? 'עברתם למצב חופש גדול ☀️' : 'עברתם למצב זמני שגרה 🏫', 'info');
+  showToast(mode === 'summer' ? 'עברתם ללו"ז חופש 🏖️' : 'עברתם למצב זמני שגרה 🏫', 'info');
 };
 
 // מאזיני אירועים

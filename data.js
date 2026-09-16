@@ -55,6 +55,7 @@ const DEFAULT_TASKS = {
 const DEFAULT_ROUTINE_TASKS = {
   daily: [
     { id: 'routine_wake_up', text: 'לקום בזמן ללימודים / גן', points: 1, icon: '⏰' },
+    { id: 'routine_make_bed_morning', text: 'לסדר את המיטה בבוקר', points: 1, icon: '🛌' },
     { id: 'routine_wash_hands', text: 'ליטול ידיים של בוקר', points: 1, icon: '💧' },
     { id: 'routine_brush_morning', text: 'לצחצוח שיניים בבוקר', points: 1, icon: '🪥' },
     { id: 'routine_bag_pack', text: 'הכנת ילקוט ומערכת שעות', points: 2, icon: '🎒' },
@@ -66,18 +67,36 @@ const DEFAULT_ROUTINE_TASKS = {
     { id: 'routine_brush_night', text: 'לצחצוח שיניים לפני השינה', points: 1, icon: '🪥' }
   ],
   bonus: [
-    { id: 'routine_tidy_room', text: 'לסדר את החדר', points: 5, icon: '🧹' },
-    { id: 'routine_tidy_living_room', text: 'לסדר את הסלון', points: 5, icon: '🛋️' },
-    { id: 'routine_move_laundry_to_dryer', text: 'להעביר כביסה מהמכונה למייבש ולהפעיל את המייבש', points: 5, icon: '💨' },
-    { id: 'routine_hang_laundry', text: 'לתלות כביסה', points: 5, icon: '🧺' },
-    { id: 'routine_good_teacher_note', text: 'הערה טובה מהמורה', points: 5, icon: '🌟' },
-    { id: 'routine_healthy_food', text: 'אוכל בריא לבית הספר', points: 5, icon: '🥗' },
-    { id: 'routine_help_homework', text: 'עזרה לאחים בשיעורי בית', points: 5, icon: '📚' },
-    { id: 'routine_wash_dishes', text: 'לשטוף כלים', points: 5, icon: '🧽' },
+    // פירוק לסדר את הסלון
+    { id: 'routine_tidy_table', text: 'לסדר את השולחן', points: 1, icon: '🪑' },
+    { id: 'routine_tidy_island', text: 'לסדר את האי', points: 1, icon: '🍽️' },
+    { id: 'routine_tidy_small_sofa', text: 'לסדר את הספה הקטנה', points: 1, icon: '🛋️' },
+    { id: 'routine_tidy_big_sofa', text: 'לסדר את הספה הגדולה', points: 1, icon: '🛋️' },
+    { id: 'routine_tidy_living_floor', text: 'לסדר את הריצפה בסלון', points: 1, icon: '🧹' },
+    { id: 'routine_sweep_floor', text: 'לטאטא ריצפה', points: 1, icon: '🧹' },
+    
+    // פירוק לסדר את החדר
+    { id: 'routine_tidy_library', text: 'לסדר את הספרייה בחדר כולל איסוף של כל הספרים', points: 1, icon: '📚' },
+    { id: 'routine_tidy_scarves_drawer', text: 'לסדר את מגירת המטפחות כולל איסוף של כל המטפחות', points: 1, icon: '🧣' },
+    { id: 'routine_tidy_room_floor', text: 'לסדר את הריצפה בחדר', points: 2, icon: '🧹' },
+    { id: 'routine_tidy_games_closet', text: 'לסדר את הארון משחקים', points: 2, icon: '🧸' },
+    { id: 'routine_tidy_crafts_closet', text: 'לסדר את הארון יצירות', points: 2, icon: '🎨' },
+
+    // כביסה וכלים
+    { id: 'routine_move_laundry_to_dryer', text: 'להעביר כביסה מהמכונה למייבש ולהפעיל את המייבש', points: 1, icon: '💨' },
+    { id: 'routine_hang_laundry', text: 'לתלות כביסה', points: 2, icon: '🧺' },
     { id: 'routine_fold_laundry', text: 'לקפל כביסה', points: 5, icon: '👕' },
+    { id: 'routine_wash_milky_dishes', text: 'לשטוף כלים כיור חלבי', points: 2, icon: '🥛' },
+    { id: 'routine_load_dishwasher', text: 'להכניס כלים למדיח', points: 2, icon: '🍽️' },
+    { id: 'routine_unload_dishwasher', text: 'לפנות את המדיח', points: 2, icon: '🍽️' },
+    { id: 'routine_wash_dishes', text: 'לשטוף כלים', points: 5, icon: '🧽' },
+
+    // משימות לימודים ובית
+    { id: 'routine_healthy_food', text: 'אוכל בריא לבית הספר', points: 1, icon: '🥗' },
+    { id: 'routine_good_teacher_note', text: 'הערה טובה מהמורה', points: 5, icon: '🌟' },
+    { id: 'routine_help_homework', text: 'עזרה לאחים בשיעורי בית', points: 5, icon: '📚' },
     { id: 'routine_shabbat_prep', text: 'עזרה מיוחדת בהכנות לשבת', points: 10, icon: '🕯️' },
     { id: 'routine_babysit', text: 'לשמור על שירה וטליה', points: 5, icon: '👶' },
-    { id: 'routine_unload_dishwasher', text: 'לפנות את המדיח', points: 5, icon: '🍽️' },
     { id: 'routine_throw_trash', text: 'לשפוך אשפה', points: 5, icon: '🗑️' }
   ],
   negative: [
