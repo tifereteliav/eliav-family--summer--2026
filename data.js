@@ -60,6 +60,7 @@ const DEFAULT_ROUTINE_TASKS = {
     { id: 'routine_brush_morning', text: 'לצחצוח שיניים בבוקר', points: 1, icon: '🪥' },
     { id: 'routine_bag_pack', text: 'הכנת ילקוט ומערכת שעות', points: 1, icon: '🎒' },
     { id: 'routine_homework', text: 'הכנת שיעורי בית בזמן', points: 1, icon: '📝' },
+    { id: 'routine_healthy_food', text: 'אוכל בריא לבית הספר', points: 1, icon: '🥗' },
     { id: 'routine_clear_lunch', text: 'פינוי ארוחת צהריים', points: 1, icon: '🍲' },
     { id: 'routine_clear_dinner', text: 'פינוי ארוחת ערב', points: 1, icon: '🥣' },
     { id: 'routine_shower', text: 'מקלחת בזמן', points: 1, icon: '🚿' },
@@ -89,10 +90,13 @@ const DEFAULT_ROUTINE_TASKS = {
     { id: 'routine_wash_milky_dishes', text: 'לשטוף כלים כיור חלבי', points: 2, icon: '🥛' },
     { id: 'routine_load_dishwasher', text: 'להכניס כלים למדיח', points: 2, icon: '🍽️' },
     { id: 'routine_unload_dishwasher', text: 'לפנות את המדיח', points: 2, icon: '🍽️' },
-    { id: 'routine_wash_dishes', text: 'לשטוף כלים', points: 5, icon: '🧽' },
+
+    // טיפול בילדים
+    { id: 'routine_bathe_kids', text: 'לקלח את שירה וטליה', points: 2, icon: '🛀' },
+    { id: 'routine_help_talia_dress', text: 'לעזור לטליה להתלבש', points: 1, icon: '👚' },
+    { id: 'routine_help_shira_dress', text: 'לעזור לשירה להתלבש', points: 1, icon: '👚' },
 
     // משימות לימודים ובית
-    { id: 'routine_healthy_food', text: 'אוכל בריא לבית הספר', points: 1, icon: '🥗' },
     { id: 'routine_good_teacher_note', text: 'הערה טובה מהמורה', points: 5, icon: '🌟' },
     { id: 'routine_help_homework', text: 'עזרה לאחים בשיעורי בית', points: 5, icon: '📚' },
     { id: 'routine_shabbat_prep', text: 'עזרה מיוחדת בהכנות לשבת', points: 10, icon: '🕯️' },
